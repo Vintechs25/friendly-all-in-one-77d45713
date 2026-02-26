@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBranding } from "@/contexts/BrandingContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import type { Permission } from "@/hooks/usePermissions";
 import {
@@ -10,13 +11,11 @@ import {
   BarChart3,
   Users,
   Settings,
-  Building2,
   Receipt,
   Zap,
   ChevronLeft,
   ChevronRight,
   LogOut,
-  Bell,
   Search,
   Menu,
   Clock,
@@ -70,6 +69,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const { profile, signOut } = useAuth();
   const { can } = usePermissions();
+  const { branding } = useBranding();
 
   const visibleNavItems = navItems.filter((item) => !item.permission || can(item.permission));
 
@@ -97,12 +97,24 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
       >
-        {/* Logo */}
+        {/* Logo / Business Branding */}
         <div className="flex h-16 items-center px-4 gap-2 border-b border-sidebar-border">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary">
-            <Zap className="h-5 w-5 text-sidebar-primary-foreground" />
-          </div>
-          {!collapsed && <span className="font-display text-lg font-bold text-sidebar-accent-foreground">SwiftPOS</span>}
+          {branding.logoUrl ? (
+            <img
+              src={branding.logoUrl}
+              alt={branding.businessName}
+              className="h-9 w-9 shrink-0 rounded-lg object-cover"
+            />
+          ) : (
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary">
+              <Zap className="h-5 w-5 text-sidebar-primary-foreground" />
+            </div>
+          )}
+          {!collapsed && (
+            <span className="font-display text-lg font-bold text-sidebar-accent-foreground truncate">
+              {branding.businessName}
+            </span>
+          )}
         </div>
 
         {/* Nav */}
@@ -129,6 +141,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* Bottom */}
         <div className="border-t border-sidebar-border p-3 space-y-1">
+          {/* Platform watermark */}
+          {branding.platformWatermark && !collapsed && (
+            <p className="text-[10px] text-sidebar-foreground/40 text-center pb-1">
+              Powered by SwiftPOS
+            </p>
+          )}
           <button
             onClick={() => setCollapsed(!collapsed)}
             className="hidden lg:flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"

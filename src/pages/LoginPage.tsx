@@ -95,11 +95,11 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            Don't have an account?{" "}
-            <Link to="/signup" className="text-primary font-medium hover:underline">Create one</Link>
+          {/* Platform watermark */}
+          <p className="mt-8 text-center text-[10px] text-muted-foreground/60">
+            Powered by SwiftPOS Platform
           </p>
-          <p className="mt-4 text-center">
+          <p className="mt-2 text-center">
             <Link to="/" className="text-xs text-muted-foreground hover:text-foreground">← Back to home</Link>
           </p>
         </div>
