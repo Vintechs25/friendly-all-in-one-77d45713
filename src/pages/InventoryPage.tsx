@@ -352,11 +352,11 @@ export default function InventoryPage() {
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-2">
-                <Label>Price ($)</Label>
+                <Label>Price (KSh)</Label>
                 <Input type="number" step="0.01" min="0" value={form.price} onChange={e => updateField("price", e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label>Cost ($)</Label>
+                <Label>Cost (KSh)</Label>
                 <Input type="number" step="0.01" min="0" value={form.cost} onChange={e => updateField("cost", e.target.value)} />
               </div>
               <div className="space-y-2">
