@@ -218,7 +218,7 @@ export default function SplitPaymentPanel({
             />
             {cashTendered >= total && cashTendered > 0 && (
               <p className="text-sm font-semibold text-green-600">
-                Change: ${(cashTendered - total).toFixed(2)}
+                Change: KSh {(cashTendered - total).toFixed(2)}
               </p>
             )}
           </div>
