@@ -447,6 +447,136 @@ export type Database = {
           },
         ]
       }
+      held_sale_items: {
+        Row: {
+          created_at: string
+          held_sale_id: string
+          id: string
+          item_discount: number
+          item_discount_type: string
+          price_override: number | null
+          product_id: string
+          product_name: string
+          quantity: number
+          tax_rate: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          held_sale_id: string
+          id?: string
+          item_discount?: number
+          item_discount_type?: string
+          price_override?: number | null
+          product_id: string
+          product_name: string
+          quantity?: number
+          tax_rate?: number
+          unit_price: number
+        }
+        Update: {
+          created_at?: string
+          held_sale_id?: string
+          id?: string
+          item_discount?: number
+          item_discount_type?: string
+          price_override?: number | null
+          product_id?: string
+          product_name?: string
+          quantity?: number
+          tax_rate?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "held_sale_items_held_sale_id_fkey"
+            columns: ["held_sale_id"]
+            isOneToOne: false
+            referencedRelation: "held_sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "held_sale_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      held_sales: {
+        Row: {
+          branch_id: string
+          business_id: string
+          cart_discount: number
+          cart_discount_type: string
+          cashier_id: string
+          created_at: string
+          customer_id: string | null
+          discount_amount: number
+          id: string
+          label: string | null
+          subtotal: number
+          tax_amount: number
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          business_id: string
+          cart_discount?: number
+          cart_discount_type?: string
+          cashier_id: string
+          created_at?: string
+          customer_id?: string | null
+          discount_amount?: number
+          id?: string
+          label?: string | null
+          subtotal?: number
+          tax_amount?: number
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          business_id?: string
+          cart_discount?: number
+          cart_discount_type?: string
+          cashier_id?: string
+          created_at?: string
+          customer_id?: string | null
+          discount_amount?: number
+          id?: string
+          label?: string | null
+          subtotal?: number
+          tax_amount?: number
+          total?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "held_sales_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "held_sales_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "held_sales_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory: {
         Row: {
           branch_id: string
@@ -912,6 +1042,10 @@ export type Database = {
           created_at: string
           discount: number
           id: string
+          item_discount: number
+          item_discount_type: string
+          override_by: string | null
+          price_override: number | null
           product_id: string
           product_name: string
           quantity: number
@@ -924,6 +1058,10 @@ export type Database = {
           created_at?: string
           discount?: number
           id?: string
+          item_discount?: number
+          item_discount_type?: string
+          override_by?: string | null
+          price_override?: number | null
           product_id: string
           product_name: string
           quantity?: number
@@ -936,6 +1074,10 @@ export type Database = {
           created_at?: string
           discount?: number
           id?: string
+          item_discount?: number
+          item_discount_type?: string
+          override_by?: string | null
+          price_override?: number | null
           product_id?: string
           product_name?: string
           quantity?: number
@@ -977,6 +1119,9 @@ export type Database = {
           subtotal: number
           tax_amount: number
           total: number
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
         }
         Insert: {
           branch_id: string
@@ -993,6 +1138,9 @@ export type Database = {
           subtotal?: number
           tax_amount?: number
           total?: number
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
         }
         Update: {
           branch_id?: string
@@ -1009,6 +1157,9 @@ export type Database = {
           subtotal?: number
           tax_amount?: number
           total?: number
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
         }
         Relationships: [
           {
