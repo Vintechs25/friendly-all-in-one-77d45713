@@ -147,7 +147,7 @@ export default function InventoryPage() {
     }
     setSaving(true);
     try {
-      const productData = {
+      const productData: any = {
         business_id: businessId,
         name: form.name.trim(),
         sku: form.sku.trim() || null,
@@ -160,6 +160,10 @@ export default function InventoryPage() {
         unit: form.unit || "piece",
         min_stock_level: parseInt(form.min_stock_level) || 10,
         track_inventory: form.track_inventory,
+        expiry_date: form.expiry_date || null,
+        batch_number: form.batch_number.trim() || null,
+        serial_number: form.serial_number.trim() || null,
+        minimum_price: parseFloat(form.minimum_price) || 0,
       };
 
       if (editingProduct) {
