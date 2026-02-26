@@ -34,8 +34,8 @@ type Product = Tables<"products">;
 
 export default function POSPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [mobileView, setMobileView] = useState<"products" | "cart">("products");
   const [searchTerm, setSearchTerm] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -515,63 +515,24 @@ export default function POSPage() {
       <LicenseBanner />
       <ReceiptPreviewDialog open={showReceipt} onOpenChange={setShowReceipt} data={receiptData} />
 
-      {/* Mobile tab toggle */}
-      <div className="flex lg:hidden mb-2 rounded-lg border border-border overflow-hidden">
-        <button
-          onClick={() => setMobileView("products")}
-          className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
-            mobileView === "products" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground"
-          }`}
-        >
-          Products
-        </button>
-        <button
-          onClick={() => setMobileView("cart")}
-          className={`flex-1 py-2.5 text-sm font-medium transition-colors relative ${
-            mobileView === "cart" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground"
-          }`}
-        >
-          Cart {cart.length > 0 && (
-            <span className={`ml-1 inline-flex items-center justify-center h-5 w-5 rounded-full text-xs font-bold ${
-              mobileView === "cart" ? "bg-primary-foreground text-primary" : "bg-primary text-primary-foreground"
-            }`}>
-              {cart.length}
-            </span>
-          )}
-        </button>
-      </div>
-
-      <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-11rem)] lg:h-[calc(100vh-8.5rem)]">
-        {/* Products Panel */}
-        <div className={`flex-1 flex flex-col min-h-0 overflow-hidden ${mobileView !== "products" ? "hidden lg:flex" : "flex"}`}>
-          <div className="flex items-center gap-3 mb-2">
+      <div className="flex flex-col h-[calc(100vh-8.5rem)] max-w-2xl mx-auto">
+        {/* Search with autocomplete */}
+        <div className="relative mb-3">
+          <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search products or scan barcode..."
-                className="pl-9"
+                placeholder="Search product name, SKU, or barcode..."
+                className="pl-9 h-11"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setShowSuggestions(e.target.value.length > 0);
+                }}
+                onFocus={() => { if (searchTerm.length > 0) setShowSuggestions(true); }}
+                onBlur={() => { setTimeout(() => setShowSuggestions(false), 200); }}
               />
             </div>
-            <div className="flex rounded-lg border border-border overflow-hidden shrink-0">
-              {(["checkout", "search", "quantity"] as ScanMode[]).map((m) => (
-                <button
-                  key={m}
-                  onClick={() => setScanMode(m)}
-                  className={`px-3 py-2 text-[10px] font-medium capitalize transition-colors ${
-                    scanMode === m
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-card text-muted-foreground hover:bg-muted"
-                  }`}
-                >
-                  {m}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="mb-2">
             <ScannerIndicator
               isActive={scanner.isActive}
               scanCount={scanner.scanCount}
@@ -583,61 +544,56 @@ export default function POSPage() {
             />
           </div>
 
-          {/* Category filter */}
-          <div className="mb-2">
-            <CategoryFilter
-              categories={categories}
-              selectedCategory={selectedCategory}
-              onSelect={setSelectedCategory}
-            />
-          </div>
-
-          {loadingProducts ? (
-            <div className="flex-1 flex items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
-              <Package className="h-12 w-12 mb-3 opacity-40" />
-              <p className="text-sm font-medium">
-                {products.length === 0 ? "No products yet" : "No matching products"}
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 overflow-y-auto flex-1">
-              {filtered.map((product) => (
+          {/* Autocomplete dropdown */}
+          {showSuggestions && filtered.length > 0 && (
+            <div className="absolute z-50 top-full left-0 right-0 mt-1 rounded-lg border border-border bg-card shadow-lg max-h-64 overflow-y-auto">
+              {filtered.slice(0, 8).map((product) => (
                 <button
                   key={product.id}
-                  onClick={() => { addToCart(product); toast.success(`Added: ${product.name}`); setMobileView("cart"); }}
-                  className="flex flex-col items-center justify-center rounded-xl border border-border bg-card p-4 hover:border-primary/40 hover:shadow-md transition-all text-center"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    addToCart(product);
+                    toast.success(`Added: ${product.name}`);
+                    setSearchTerm("");
+                    setShowSuggestions(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors text-left border-b border-border last:border-b-0"
                 >
-                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
-                    <span className="text-xs font-bold text-primary">
+                  <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <span className="text-[10px] font-bold text-primary">
                       {(product.sku ?? product.name.slice(0, 3)).slice(0, 3).toUpperCase()}
                     </span>
                   </div>
-                  <p className="text-sm font-medium leading-tight">{product.name}</p>
-                  <p className="text-primary font-display font-bold mt-1">KSh {product.price.toFixed(2)}</p>
-                  {product.barcode && (
-                    <div className="flex items-center gap-1 mt-1">
-                      <Barcode className="h-3 w-3 text-muted-foreground" />
-                      <p className="text-[10px] text-muted-foreground font-mono">{product.barcode}</p>
-                    </div>
-                  )}
-                  {product.tax_rate > 0 && (
-                    <p className="text-[10px] text-muted-foreground">+{product.tax_rate}% tax</p>
-                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{product.name}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {product.sku && <span className="mr-2">SKU: {product.sku}</span>}
+                      {product.barcode && <span>BC: {product.barcode}</span>}
+                    </p>
+                  </div>
+                  <span className="text-sm font-bold text-primary whitespace-nowrap">KSh {product.price.toFixed(2)}</span>
                 </button>
               ))}
+              {filtered.length > 8 && (
+                <p className="text-xs text-muted-foreground text-center py-2">
+                  +{filtered.length - 8} more results — keep typing to narrow down
+                </p>
+              )}
+            </div>
+          )}
+          {showSuggestions && searchTerm.length > 0 && filtered.length === 0 && (
+            <div className="absolute z-50 top-full left-0 right-0 mt-1 rounded-lg border border-border bg-card shadow-lg p-4 text-center">
+              <Package className="h-6 w-6 mx-auto mb-1 text-muted-foreground opacity-40" />
+              <p className="text-sm text-muted-foreground">No products found</p>
             </div>
           )}
         </div>
 
-        {/* Cart Panel */}
-        <div className={`w-full lg:w-[420px] flex flex-col rounded-xl border border-border bg-card min-h-0 shrink-0 lg:max-h-full ${mobileView !== "cart" ? "hidden lg:flex" : "flex"}`}>
+        {/* Cart / Sale Panel */}
+        <div className="flex-1 flex flex-col rounded-xl border border-border bg-card min-h-0">
           <div className="p-4 border-b border-border flex items-center justify-between">
             <div>
-              <h2 className="font-display font-semibold">Current Sale</h2>
+              <h2 className="font-display font-semibold text-lg">Current Sale</h2>
               <p className="text-xs text-muted-foreground">
                 {cart.length} item(s) · {cart.reduce((s, i) => s + i.qty, 0)} units
               </p>
@@ -666,8 +622,9 @@ export default function POSPage() {
           <div className="flex-1 overflow-y-auto p-4 space-y-2 min-h-0">
             {cart.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                <Barcode className="h-8 w-8 mb-2 opacity-40" />
-                <p className="text-sm">Scan a barcode or tap a product</p>
+                <Barcode className="h-10 w-10 mb-3 opacity-30" />
+                <p className="text-sm font-medium">No items yet</p>
+                <p className="text-xs mt-1">Search for a product above or scan a barcode</p>
               </div>
             ) : (
               cart.map((item) => (
@@ -686,7 +643,6 @@ export default function POSPage() {
 
           {/* Totals & Payments */}
           <div className="border-t border-border p-4 space-y-3">
-            {/* Cart discount */}
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground">Subtotal</span>
               <span className="text-sm">KSh {itemsSubtotal.toFixed(2)}</span>
@@ -720,7 +676,7 @@ export default function POSPage() {
                 </PopoverContent>
               </Popover>
               {cartDiscountAmount > 0 && (
-                <span className="text-xs text-green-600 ml-auto">-KSh {cartDiscountAmount.toFixed(2)}</span>
+                <span className="text-xs text-destructive ml-auto">-KSh {cartDiscountAmount.toFixed(2)}</span>
               )}
             </div>
 
@@ -749,7 +705,7 @@ export default function POSPage() {
               businessId={profile?.business_id ?? null}
             />
 
-            <Button className="w-full" disabled={cart.length === 0 || processing || !canUsePOS} onClick={completeSale}>
+            <Button className="w-full h-12 text-base" disabled={cart.length === 0 || processing || !canUsePOS} onClick={completeSale}>
               {!canUsePOS ? "License Required" : processing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing...</> : "Complete Sale"}
             </Button>
           </div>
