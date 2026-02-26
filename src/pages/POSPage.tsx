@@ -675,7 +675,7 @@ export default function POSPage() {
 
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Tax</span>
-              <span>${taxAmount.toFixed(2)}</span>
+              <span>KSh {taxAmount.toFixed(2)}</span>
             </div>
             <div className="flex justify-between font-display text-lg font-bold pt-2 border-t border-border">
               <span>Total</span>
