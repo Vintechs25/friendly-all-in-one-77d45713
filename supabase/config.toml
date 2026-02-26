@@ -1,1 +1,4 @@
 project_id = "vzerzgmywwhvcgkezkhh"
+
+[functions.license-server]
+verify_jwt = false
