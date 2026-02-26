@@ -608,7 +608,7 @@ export default function POSPage() {
               {filtered.map((product) => (
                 <button
                   key={product.id}
-                  onClick={() => { addToCart(product); toast.success(`Added: ${product.name}`); }}
+                  onClick={() => { addToCart(product); toast.success(`Added: ${product.name}`); setMobileView("cart"); }}
                   className="flex flex-col items-center justify-center rounded-xl border border-border bg-card p-4 hover:border-primary/40 hover:shadow-md transition-all text-center"
                 >
                   <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
