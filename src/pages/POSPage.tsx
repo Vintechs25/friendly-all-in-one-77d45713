@@ -669,7 +669,7 @@ export default function POSPage() {
                 </PopoverContent>
               </Popover>
               {cartDiscountAmount > 0 && (
-                <span className="text-xs text-green-600 ml-auto">-${cartDiscountAmount.toFixed(2)}</span>
+                <span className="text-xs text-green-600 ml-auto">-KSh {cartDiscountAmount.toFixed(2)}</span>
               )}
             </div>
 
