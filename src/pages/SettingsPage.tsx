@@ -1,22 +1,45 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLicense } from "@/contexts/LicenseContext";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { User, Lock, Building2 } from "lucide-react";
+import { User, Lock, Building2, AlertTriangle, Shield } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 export default function SettingsPage() {
-  const { user, profile } = useAuth();
+  const { user, profile, session, hasRole } = useAuth();
+  const { refreshLicense, licenseState } = useLicense();
   const [fullName, setFullName] = useState(profile?.full_name ?? "");
   const [phone, setPhone] = useState(profile?.phone ?? "");
   const [saving, setSaving] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
+  const [endingTrial, setEndingTrial] = useState(false);
+  const [showEndTrialDialog, setShowEndTrialDialog] = useState(false);
+
+  const isBusinessOwner = hasRole("business_owner" as any);
+
+  const { data: business } = useQuery({
+    queryKey: ["my-business", profile?.business_id],
+    enabled: !!profile?.business_id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("businesses")
+        .select("name, subscription_plan, trial_ends_at")
+        .eq("id", profile!.business_id!)
+        .single();
+      return data;
+    },
+  });
+
+  const trialActive = business?.subscription_plan === "trial" &&
+    business?.trial_ends_at && new Date(business.trial_ends_at) > new Date();
 
   const handleUpdateProfile = async () => {
     if (!user) return;
@@ -40,10 +63,39 @@ export default function SettingsPage() {
     if (error) toast.error(error.message);
     else {
       toast.success("Password updated");
-      setCurrentPassword("");
       setNewPassword("");
     }
     setChangingPassword(false);
+  };
+
+  const handleEndTrial = async () => {
+    setEndingTrial(true);
+    try {
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || "vzerzgmywwhvcgkezkhh";
+      const res = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/license-server?action=end_trial`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({}),
+        }
+      );
+      const result = await res.json();
+      if (result.success) {
+        toast.success("Trial ended. You'll need a license key to continue.");
+        setShowEndTrialDialog(false);
+        await refreshLicense();
+      } else {
+        toast.error(result.error || "Failed to end trial");
+      }
+    } catch {
+      toast.error("Failed to end trial");
+    } finally {
+      setEndingTrial(false);
+    }
   };
 
   return (
@@ -98,12 +150,60 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><Building2 className="h-5 w-5" /> Business</CardTitle>
-              <CardDescription>Your business details.</CardDescription>
+              <CardDescription>Your business details and subscription.</CardDescription>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                {profile?.business_id ? `Business ID: ${profile.business_id}` : "No business linked to your account yet."}
-              </p>
+            <CardContent className="space-y-4">
+              {business ? (
+                <>
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">{business.name}</p>
+                    <p className="text-xs text-muted-foreground capitalize">
+                      Plan: {business.subscription_plan}
+                    </p>
+                    {trialActive && (
+                      <p className="text-xs text-muted-foreground">
+                        Trial ends: {new Date(business.trial_ends_at!).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* License status */}
+                  <div className="flex items-center gap-2 text-xs">
+                    <Shield className="h-3.5 w-3.5" />
+                    <span className="capitalize">{licenseState === "active" ? "Licensed" : licenseState}</span>
+                  </div>
+
+                  {/* End Trial button — only for business owners on active trial */}
+                  {isBusinessOwner && trialActive && (
+                    <Dialog open={showEndTrialDialog} onOpenChange={setShowEndTrialDialog}>
+                      <DialogTrigger asChild>
+                        <Button variant="destructive" size="sm" className="w-full">
+                          <AlertTriangle className="h-4 w-4 mr-1" /> End Trial Now
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>End Trial Period?</DialogTitle>
+                          <DialogDescription>
+                            This will immediately end your trial. All users will be required to enter a license key 
+                            (provided by the platform administrator) to continue accessing the system. This action cannot be undone.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => setShowEndTrialDialog(false)}>Cancel</Button>
+                          <Button variant="destructive" onClick={handleEndTrial} disabled={endingTrial}>
+                            {endingTrial ? "Ending..." : "End Trial"}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  )}
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No business linked to your account yet.
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>

@@ -17,6 +17,8 @@ interface LicenseContextType {
   isLoading: boolean;
   canUsePOS: boolean;
   canLogin: boolean;
+  /** True when business needs a license key (trial ended + no active license) */
+  needsLicense: boolean;
   refreshLicense: () => Promise<void>;
 }
 
@@ -25,10 +27,13 @@ const LicenseContext = createContext<LicenseContextType | undefined>(undefined);
 const PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID || "vzerzgmywwhvcgkezkhh";
 
 export function LicenseProvider({ children }: { children: React.ReactNode }) {
-  const { user, profile } = useAuth();
+  const { user, profile, roles } = useAuth();
   const [licenseState, setLicenseState] = useState<LicenseState>("unregistered");
   const [validation, setValidation] = useState<LicenseValidation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [needsLicense, setNeedsLicense] = useState(false);
+
+  const isSuperAdmin = roles.includes("super_admin" as any);
 
   const handleStateChange = useCallback((v: LicenseValidation) => {
     setValidation(v);
@@ -38,10 +43,30 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
 
   const refreshLicense = useCallback(async () => {
     if (!profile?.business_id) return;
-    
+
+    // Super admins bypass license checks
+    if (isSuperAdmin) {
+      setLicenseState("active");
+      setValidation({ state: "active", message: "Platform administrator." });
+      setNeedsLicense(false);
+      setIsLoading(false);
+      return;
+    }
+
+    // Check if business trial has ended
+    const { data: business } = await supabase
+      .from("businesses")
+      .select("trial_ends_at, subscription_plan")
+      .eq("id", profile.business_id)
+      .single();
+
+    const trialEnded = business?.trial_ends_at && new Date(business.trial_ends_at) <= new Date();
+    const isTrialPlan = business?.subscription_plan === "trial";
+
+    // Look for an active license
     const { data: license } = await supabase
       .from("licenses")
-      .select("license_key")
+      .select("license_key, status")
       .eq("business_id", profile.business_id)
       .eq("status", "active")
       .order("created_at", { ascending: false })
@@ -49,34 +74,70 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
       .maybeSingle();
 
     if (!license) {
-      // No license found — allow usage (license system is opt-in per business)
+      if (trialEnded || (isTrialPlan && trialEnded)) {
+        // Trial ended and no license → block access
+        setNeedsLicense(true);
+        setLicenseState("expired");
+        setValidation({
+          state: "expired",
+          message: "Your trial has ended. Please enter a license key to continue.",
+          salesBlocked: true,
+          loginBlocked: false,
+        });
+        setIsLoading(false);
+        return;
+      }
+      // Still on active trial or no trial_ends_at set → allow
+      setNeedsLicense(false);
       setLicenseState("active");
-      setValidation({
-        state: "active",
-        message: "No license required.",
-      });
+      setValidation({ state: "active", message: "Trial active." });
       setIsLoading(false);
       return;
     }
 
+    // Has a license → validate it
+    setNeedsLicense(false);
     const result = await validateLicense(license.license_key, PROJECT_ID);
     handleStateChange(result);
-  }, [profile?.business_id, handleStateChange]);
+  }, [profile?.business_id, handleStateChange, isSuperAdmin]);
 
   useEffect(() => {
     if (!user || !profile?.business_id) {
       setIsLoading(false);
-      setLicenseState("active"); // no business = no license needed
+      setLicenseState("active");
+      setNeedsLicense(false);
+      return;
+    }
+
+    // Super admins bypass
+    if (isSuperAdmin) {
+      setLicenseState("active");
+      setValidation({ state: "active", message: "Platform administrator." });
+      setNeedsLicense(false);
+      setIsLoading(false);
       return;
     }
 
     let mounted = true;
 
     async function init() {
+      // Check trial status
+      const { data: business } = await supabase
+        .from("businesses")
+        .select("trial_ends_at, subscription_plan")
+        .eq("id", profile!.business_id!)
+        .single();
+
+      if (!mounted) return;
+
+      const trialEnded = business?.trial_ends_at && new Date(business.trial_ends_at) <= new Date();
+      const isTrialPlan = business?.subscription_plan === "trial";
+
       const { data: license } = await supabase
         .from("licenses")
-        .select("license_key")
+        .select("license_key, status")
         .eq("business_id", profile!.business_id!)
+        .eq("status", "active")
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -84,13 +145,28 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
       if (!mounted) return;
 
       if (!license) {
-        // No license = no restrictions (license system is opt-in)
+        if (trialEnded || (isTrialPlan && trialEnded)) {
+          setNeedsLicense(true);
+          setLicenseState("expired");
+          setValidation({
+            state: "expired",
+            message: "Trial ended. License key required.",
+            salesBlocked: true,
+            loginBlocked: false,
+          });
+          setIsLoading(false);
+          return;
+        }
+        // Active trial
+        setNeedsLicense(false);
         setLicenseState("active");
-        setValidation({ state: "active", message: "No license required." });
+        setValidation({ state: "active", message: "Trial active." });
         setIsLoading(false);
         return;
       }
 
+      // Has license → start periodic validation
+      setNeedsLicense(false);
       startPeriodicValidation(license.license_key, PROJECT_ID, (v) => {
         if (mounted) handleStateChange(v);
       });
@@ -102,14 +178,14 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
       mounted = false;
       stopPeriodicValidation();
     };
-  }, [user, profile?.business_id, handleStateChange]);
+  }, [user, profile?.business_id, handleStateChange, isSuperAdmin]);
 
   const canUsePOS = licenseState === "active" || licenseState === "grace";
   const canLogin = licenseState !== "suspended" && licenseState !== "terminated";
 
   return (
     <LicenseContext.Provider
-      value={{ licenseState, validation, isLoading, canUsePOS, canLogin, refreshLicense }}
+      value={{ licenseState, validation, isLoading, canUsePOS, canLogin, needsLicense, refreshLicense }}
     >
       {children}
     </LicenseContext.Provider>
@@ -122,7 +198,6 @@ export function useLicense() {
   return ctx;
 }
 
-// Reusable banner component for license status
 export function LicenseBanner() {
   const { licenseState, validation } = useLicense();
 
