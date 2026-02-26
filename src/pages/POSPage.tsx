@@ -2,12 +2,15 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, Barcode, Minus, Trash2, CreditCard, Banknote, Smartphone, Loader2, Package } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLicense, LicenseBanner } from "@/contexts/LicenseContext";
+import { useScanner, ScanMode } from "@/hooks/use-scanner";
+import ScannerIndicator from "@/components/ScannerIndicator";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
+import type { BarcodeResult } from "@/lib/scan-engine";
 
 type Product = Tables<"products">;
 type PaymentMethod = "cash" | "card" | "mobile_money";
@@ -29,8 +32,93 @@ export default function POSPage() {
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
+  const [scanMode, setScanMode] = useState<ScanMode>("checkout");
+  const [soundEnabled, setSoundEnabled] = useState(true);
   const { user, profile } = useAuth();
   const { canUsePOS } = useLicense();
+
+  // Build barcode → product index for O(1) lookups
+  const barcodeIndex = useMemo(() => {
+    const idx = new Map<string, Product>();
+    for (const p of products) {
+      if (p.barcode) idx.set(p.barcode.toLowerCase(), p);
+      if (p.sku) idx.set(p.sku.toLowerCase(), p);
+    }
+    return idx;
+  }, [products]);
+
+  // Scanner scan handler
+  const handleScan = useCallback(
+    (result: BarcodeResult) => {
+      const code = result.sanitized.toLowerCase();
+
+      if (scanMode === "search") {
+        setSearchTerm(result.sanitized);
+        return;
+      }
+
+      // Lookup by barcode or SKU
+      const product = barcodeIndex.get(code);
+
+      if (!product) {
+        // Try partial match on name (for internal codes)
+        const nameMatch = products.find(
+          (p) => p.name.toLowerCase() === code || p.sku?.toLowerCase() === code
+        );
+        if (nameMatch) {
+          addToCart(nameMatch);
+          toast.success(`Added: ${nameMatch.name}`);
+          return;
+        }
+        toast.error(`Product not found: ${result.sanitized}`);
+        return;
+      }
+
+      if (scanMode === "quantity") {
+        // Quantity mode: increment if already in cart
+        setCart((prev) => {
+          const existing = prev.find((i) => i.id === product.id);
+          if (existing) {
+            return prev.map((i) =>
+              i.id === product.id ? { ...i, qty: i.qty + 1 } : i
+            );
+          }
+          return [
+            ...prev,
+            {
+              id: product.id,
+              name: product.name,
+              price: product.price,
+              cost: product.cost,
+              tax_rate: product.tax_rate,
+              qty: 1,
+              track_inventory: product.track_inventory,
+            },
+          ];
+        });
+        const currentQty = cart.find((i) => i.id === product.id)?.qty ?? 0;
+        toast.success(`${product.name} × ${currentQty + 1}`);
+        return;
+      }
+
+      // Default checkout mode
+      addToCart(product);
+      toast.success(`Added: ${product.name}`);
+    },
+    [barcodeIndex, products, scanMode, cart]
+  );
+
+  const handleScanError = useCallback((error: string) => {
+    toast.error(error);
+  }, []);
+
+  const scanner = useScanner({
+    enabled: true,
+    mode: scanMode,
+    config: { enableSound: soundEnabled },
+    onScan: handleScan,
+    onError: handleScanError,
+  });
 
   // Load products from database
   useEffect(() => {
@@ -93,7 +181,6 @@ export default function POSPage() {
 
     setProcessing(true);
     try {
-      // Get the first branch for this business
       const { data: branches } = await supabase
         .from("branches")
         .select("id")
@@ -107,10 +194,8 @@ export default function POSPage() {
         return;
       }
 
-      // Generate receipt number
       const receiptNumber = `RCP-${Date.now().toString(36).toUpperCase()}`;
 
-      // Create sale record
       const { data: sale, error: saleError } = await supabase
         .from("sales")
         .insert({
@@ -133,7 +218,6 @@ export default function POSPage() {
         return;
       }
 
-      // Insert sale items
       const saleItems = cart.map((item) => ({
         sale_id: sale.id,
         product_id: item.id,
@@ -154,7 +238,6 @@ export default function POSPage() {
         return;
       }
 
-      // Create payment record
       await supabase
         .from("payments")
         .insert({
@@ -163,11 +246,8 @@ export default function POSPage() {
           amount: total,
         });
 
-      // Update inventory for items that track it
       for (const item of cart) {
         if (!item.track_inventory) continue;
-
-        // Check if inventory record exists
         const { data: inv } = await supabase
           .from("inventory")
           .select("id, quantity")
@@ -181,7 +261,6 @@ export default function POSPage() {
             .update({ quantity: Math.max(0, inv.quantity - item.qty) })
             .eq("id", inv.id);
         } else {
-          // Create inventory record with negative to show deduction
           await supabase
             .from("inventory")
             .insert({
@@ -194,6 +273,7 @@ export default function POSPage() {
 
       toast.success(`Sale completed! Receipt: ${receiptNumber}`);
       setCart([]);
+      scanner.resetCount();
     } catch (err: any) {
       toast.error(err.message || "An error occurred");
     } finally {
@@ -207,7 +287,7 @@ export default function POSPage() {
       <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-7rem)]">
         {/* Products */}
         <div className="flex-1 flex flex-col min-h-0">
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center gap-3 mb-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -217,9 +297,35 @@ export default function POSPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Button variant="outline" size="icon">
-              <Barcode className="h-4 w-4" />
-            </Button>
+            {/* Scan mode selector */}
+            <div className="flex rounded-lg border border-border overflow-hidden shrink-0">
+              {(["checkout", "search", "quantity"] as ScanMode[]).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setScanMode(m)}
+                  className={`px-3 py-2 text-[10px] font-medium capitalize transition-colors ${
+                    scanMode === m
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-card text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Scanner indicator */}
+          <div className="mb-3">
+            <ScannerIndicator
+              isActive={scanner.isActive}
+              scanCount={scanner.scanCount}
+              showFlash={scanner.showFlash}
+              mode={scanMode}
+              soundEnabled={soundEnabled}
+              onToggleSound={() => setSoundEnabled((p) => !p)}
+              lastBarcode={scanner.lastScan?.sanitized}
+            />
           </div>
 
           {loadingProducts ? (
@@ -241,7 +347,7 @@ export default function POSPage() {
               {filtered.map((product) => (
                 <button
                   key={product.id}
-                  onClick={() => addToCart(product)}
+                  onClick={() => { addToCart(product); toast.success(`Added: ${product.name}`); }}
                   className="flex flex-col items-center justify-center rounded-xl border border-border bg-card p-4 hover:border-primary/40 hover:shadow-md transition-all text-center"
                 >
                   <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
@@ -251,6 +357,12 @@ export default function POSPage() {
                   </div>
                   <p className="text-sm font-medium leading-tight">{product.name}</p>
                   <p className="text-primary font-display font-bold mt-1">${product.price.toFixed(2)}</p>
+                  {product.barcode && (
+                    <div className="flex items-center gap-1 mt-1">
+                      <Barcode className="h-3 w-3 text-muted-foreground" />
+                      <p className="text-[10px] text-muted-foreground font-mono">{product.barcode}</p>
+                    </div>
+                  )}
                   {product.tax_rate > 0 && (
                     <p className="text-[10px] text-muted-foreground">+{product.tax_rate}% tax</p>
                   )}
@@ -264,14 +376,14 @@ export default function POSPage() {
         <div className="w-full lg:w-96 flex flex-col rounded-xl border border-border bg-card">
           <div className="p-4 border-b border-border">
             <h2 className="font-display font-semibold">Current Sale</h2>
-            <p className="text-xs text-muted-foreground">{cart.length} item(s)</p>
+            <p className="text-xs text-muted-foreground">{cart.length} item(s) · {cart.reduce((s, i) => s + i.qty, 0)} units</p>
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
             {cart.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                <Plus className="h-8 w-8 mb-2 opacity-40" />
-                <p className="text-sm">Add products to start</p>
+                <Barcode className="h-8 w-8 mb-2 opacity-40" />
+                <p className="text-sm">Scan a barcode or tap a product</p>
               </div>
             ) : (
               cart.map((item) => (
