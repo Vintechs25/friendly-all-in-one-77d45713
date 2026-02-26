@@ -248,6 +248,44 @@ export type Database = {
           },
         ]
       }
+      device_registrations: {
+        Row: {
+          device_fingerprint: string
+          device_name: string | null
+          id: string
+          is_active: boolean
+          last_seen_at: string
+          license_id: string
+          registered_at: string
+        }
+        Insert: {
+          device_fingerprint: string
+          device_name?: string | null
+          id?: string
+          is_active?: boolean
+          last_seen_at?: string
+          license_id: string
+          registered_at?: string
+        }
+        Update: {
+          device_fingerprint?: string
+          device_name?: string | null
+          id?: string
+          is_active?: boolean
+          last_seen_at?: string
+          license_id?: string
+          registered_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "device_registrations_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           amount: number
@@ -381,6 +419,56 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      licenses: {
+        Row: {
+          allowed_device_count: number
+          business_id: string
+          created_at: string
+          expires_at: string
+          grace_period_hours: number
+          id: string
+          last_validated_at: string | null
+          license_key: string
+          status: Database["public"]["Enums"]["license_status"]
+          subscription_plan: Database["public"]["Enums"]["subscription_plan_type"]
+          updated_at: string
+        }
+        Insert: {
+          allowed_device_count?: number
+          business_id: string
+          created_at?: string
+          expires_at?: string
+          grace_period_hours?: number
+          id?: string
+          last_validated_at?: string | null
+          license_key: string
+          status?: Database["public"]["Enums"]["license_status"]
+          subscription_plan?: Database["public"]["Enums"]["subscription_plan_type"]
+          updated_at?: string
+        }
+        Update: {
+          allowed_device_count?: number
+          business_id?: string
+          created_at?: string
+          expires_at?: string
+          grace_period_hours?: number
+          id?: string
+          last_validated_at?: string | null
+          license_key?: string
+          status?: Database["public"]["Enums"]["license_status"]
+          subscription_plan?: Database["public"]["Enums"]["subscription_plan_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "licenses_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
         ]
@@ -1005,6 +1093,7 @@ export type Database = {
         | "pharmacy"
         | "wholesale"
         | "other"
+      license_status: "active" | "expired" | "suspended" | "terminated"
       payment_method_type:
         | "cash"
         | "card"
@@ -1177,6 +1266,7 @@ export const Constants = {
         "wholesale",
         "other",
       ],
+      license_status: ["active", "expired", "suspended", "terminated"],
       payment_method_type: [
         "cash",
         "card",

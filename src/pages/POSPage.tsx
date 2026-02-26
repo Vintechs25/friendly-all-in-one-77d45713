@@ -5,6 +5,7 @@ import { Search, Plus, Barcode, Minus, Trash2, CreditCard, Banknote, Smartphone,
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLicense, LicenseBanner } from "@/contexts/LicenseContext";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -29,6 +30,7 @@ export default function POSPage() {
   const [processing, setProcessing] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const { user, profile } = useAuth();
+  const { canUsePOS } = useLicense();
 
   // Load products from database
   useEffect(() => {
@@ -201,6 +203,7 @@ export default function POSPage() {
 
   return (
     <DashboardLayout>
+      <LicenseBanner />
       <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-7rem)]">
         {/* Products */}
         <div className="flex-1 flex flex-col min-h-0">
@@ -338,8 +341,8 @@ export default function POSPage() {
                 <span className="text-[10px]">Mobile</span>
               </Button>
             </div>
-            <Button className="w-full" disabled={cart.length === 0 || processing} onClick={completeSale}>
-              {processing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing...</> : "Complete Sale"}
+            <Button className="w-full" disabled={cart.length === 0 || processing || !canUsePOS} onClick={completeSale}>
+              {!canUsePOS ? "License Required" : processing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing...</> : "Complete Sale"}
             </Button>
           </div>
         </div>

@@ -12,11 +12,14 @@ interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
+import { Key } from "lucide-react";
+
 const navItems = [
   { icon: LayoutDashboard, label: "Overview", path: "/admin" },
   { icon: Building2, label: "Businesses", path: "/admin/businesses" },
   { icon: CreditCard, label: "Plans", path: "/admin/plans" },
   { icon: ToggleLeft, label: "Feature Toggles", path: "/admin/features" },
+  { icon: Key, label: "Licenses", path: "/admin/licenses" },
 ];
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
