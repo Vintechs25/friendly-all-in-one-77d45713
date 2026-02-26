@@ -30,6 +30,7 @@ export default function POSPage() {
   const [processing, setProcessing] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const { user, profile } = useAuth();
+  const { canUsePOS } = useLicense();
 
   // Load products from database
   useEffect(() => {
