@@ -105,6 +105,80 @@ export type Database = {
           },
         ]
       }
+      business_settings: {
+        Row: {
+          allow_branding_edit: boolean | null
+          allow_name_edit: boolean | null
+          business_id: string
+          created_at: string
+          created_by: string | null
+          currency_code: string | null
+          currency_symbol: string | null
+          default_tax_label: string | null
+          default_tax_rate: number | null
+          id: string
+          invoice_prefix: string | null
+          logo_url: string | null
+          platform_watermark: boolean | null
+          primary_color: string | null
+          receipt_footer_text: string | null
+          receipt_header_text: string | null
+          secondary_color: string | null
+          theme_mode: string | null
+          updated_at: string
+        }
+        Insert: {
+          allow_branding_edit?: boolean | null
+          allow_name_edit?: boolean | null
+          business_id: string
+          created_at?: string
+          created_by?: string | null
+          currency_code?: string | null
+          currency_symbol?: string | null
+          default_tax_label?: string | null
+          default_tax_rate?: number | null
+          id?: string
+          invoice_prefix?: string | null
+          logo_url?: string | null
+          platform_watermark?: boolean | null
+          primary_color?: string | null
+          receipt_footer_text?: string | null
+          receipt_header_text?: string | null
+          secondary_color?: string | null
+          theme_mode?: string | null
+          updated_at?: string
+        }
+        Update: {
+          allow_branding_edit?: boolean | null
+          allow_name_edit?: boolean | null
+          business_id?: string
+          created_at?: string
+          created_by?: string | null
+          currency_code?: string | null
+          currency_symbol?: string | null
+          default_tax_label?: string | null
+          default_tax_rate?: number | null
+          id?: string
+          invoice_prefix?: string | null
+          logo_url?: string | null
+          platform_watermark?: boolean | null
+          primary_color?: string | null
+          receipt_footer_text?: string | null
+          receipt_header_text?: string | null
+          secondary_color?: string | null
+          theme_mode?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_settings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       businesses: {
         Row: {
           address: string | null
@@ -665,6 +739,57 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      license_validations: {
+        Row: {
+          branch_id: string | null
+          business_id: string
+          device_fingerprint: string
+          device_name: string | null
+          failure_reason: string | null
+          id: string
+          ip_address: string | null
+          validated_at: string
+          validation_status: string
+        }
+        Insert: {
+          branch_id?: string | null
+          business_id: string
+          device_fingerprint: string
+          device_name?: string | null
+          failure_reason?: string | null
+          id?: string
+          ip_address?: string | null
+          validated_at?: string
+          validation_status?: string
+        }
+        Update: {
+          branch_id?: string | null
+          business_id?: string
+          device_fingerprint?: string
+          device_name?: string | null
+          failure_reason?: string | null
+          id?: string
+          ip_address?: string | null
+          validated_at?: string
+          validation_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "license_validations_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "license_validations_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
         ]
