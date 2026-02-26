@@ -187,16 +187,23 @@ export default function POSPage() {
     try {
       const { data: branches } = await supabase
         .from("branches")
-        .select("id")
+        .select("id, name")
         .eq("business_id", profile.business_id)
         .eq("is_active", true)
         .limit(1);
 
-      const branchId = branches?.[0]?.id;
-      if (!branchId) {
+      const branch = branches?.[0];
+      if (!branch) {
         toast.error("No active branch found");
         return;
       }
+
+      // Fetch business info for receipt
+      const { data: business } = await supabase
+        .from("businesses")
+        .select("name, address, phone")
+        .eq("id", profile.business_id)
+        .single();
 
       const receiptNumber = `RCP-${Date.now().toString(36).toUpperCase()}`;
 
@@ -204,7 +211,7 @@ export default function POSPage() {
         .from("sales")
         .insert({
           business_id: profile.business_id,
-          branch_id: branchId,
+          branch_id: branch.id,
           cashier_id: user.id,
           receipt_number: receiptNumber,
           subtotal,
@@ -256,7 +263,7 @@ export default function POSPage() {
           .from("inventory")
           .select("id, quantity")
           .eq("product_id", item.id)
-          .eq("branch_id", branchId)
+          .eq("branch_id", branch.id)
           .single();
 
         if (inv) {
@@ -269,11 +276,36 @@ export default function POSPage() {
             .from("inventory")
             .insert({
               product_id: item.id,
-              branch_id: branchId,
+              branch_id: branch.id,
               quantity: 0,
             });
         }
       }
+
+      // Build receipt data and show preview
+      const receipt: ReceiptData = {
+        receiptNumber,
+        businessName: business?.name || "Business",
+        branchName: branch.name,
+        address: business?.address || undefined,
+        phone: business?.phone || undefined,
+        cashierName: profile.full_name || undefined,
+        items: cart.map((item) => ({
+          name: item.name,
+          qty: item.qty,
+          unitPrice: item.price,
+          taxAmount: item.price * item.qty * item.tax_rate / 100,
+          total: item.price * item.qty + (item.price * item.qty * item.tax_rate / 100),
+        })),
+        subtotal,
+        taxAmount,
+        discountAmount: 0,
+        total,
+        paymentMethod,
+        date: new Date(),
+      };
+      setReceiptData(receipt);
+      setShowReceipt(true);
 
       toast.success(`Sale completed! Receipt: ${receiptNumber}`);
       setCart([]);
@@ -288,6 +320,11 @@ export default function POSPage() {
   return (
     <DashboardLayout>
       <LicenseBanner />
+      <ReceiptPreviewDialog
+        open={showReceipt}
+        onOpenChange={setShowReceipt}
+        data={receiptData}
+      />
       <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-7rem)]">
         {/* Products */}
         <div className="flex-1 flex flex-col min-h-0">
