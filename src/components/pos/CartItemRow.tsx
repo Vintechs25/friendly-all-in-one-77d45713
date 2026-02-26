@@ -44,7 +44,7 @@ export default function CartItemRow({
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate">{item.name}</p>
           <p className="text-xs text-muted-foreground">
-            ${effectivePrice.toFixed(2)} each
+            KSh {effectivePrice.toFixed(2)} each
             {item.priceOverride !== null && (
               <span className="text-yellow-600 ml-1">(overridden)</span>
             )}
