@@ -79,7 +79,7 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
     const { data: license } = await supabase
       .from("licenses")
       .select("license_key, status")
-      .eq("business_id", profile.business_id)
+      .eq("business_id", businessId)
       .eq("status", "active")
       .order("created_at", { ascending: false })
       .limit(1)
