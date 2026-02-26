@@ -102,10 +102,25 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
   }, [profile?.business_id, handleStateChange, isSuperAdmin]);
 
   useEffect(() => {
-    if (!user || !profile?.business_id) {
+    if (!user) {
       setIsLoading(false);
       setLicenseState("active");
       setNeedsLicense(false);
+      return;
+    }
+
+    if (!profile?.business_id) {
+      // Non-admin users with no business must get a license / be provisioned
+      if (isSuperAdmin) {
+        setLicenseState("active");
+        setValidation({ state: "active", message: "Platform administrator." });
+        setNeedsLicense(false);
+      } else {
+        setLicenseState("expired");
+        setValidation({ state: "expired", message: "No business linked. Contact your platform administrator.", salesBlocked: true, loginBlocked: false });
+        setNeedsLicense(true);
+      }
+      setIsLoading(false);
       return;
     }
 
