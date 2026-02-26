@@ -634,7 +634,7 @@ export default function POSPage() {
         </div>
 
         {/* Cart Panel */}
-        <div className="w-full lg:w-[420px] flex flex-col rounded-xl border border-border bg-card min-h-0 shrink-0 lg:max-h-full">
+        <div className={`w-full lg:w-[420px] flex flex-col rounded-xl border border-border bg-card min-h-0 shrink-0 lg:max-h-full ${mobileView !== "cart" ? "hidden lg:flex" : "flex"}`}>
           <div className="p-4 border-b border-border flex items-center justify-between">
             <div>
               <h2 className="font-display font-semibold">Current Sale</h2>
