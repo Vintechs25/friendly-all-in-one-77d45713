@@ -325,9 +325,9 @@ export default function POSPage() {
         onOpenChange={setShowReceipt}
         data={receiptData}
       />
-      <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-7rem)]">
+      <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-8.5rem)]">
         {/* Products */}
-        <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           <div className="flex items-center gap-3 mb-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -414,7 +414,7 @@ export default function POSPage() {
         </div>
 
         {/* Cart */}
-        <div className="w-full lg:w-96 flex flex-col rounded-xl border border-border bg-card">
+        <div className="w-full lg:w-96 flex flex-col rounded-xl border border-border bg-card min-h-0 shrink-0 lg:max-h-full">
           <div className="p-4 border-b border-border">
             <h2 className="font-display font-semibold">Current Sale</h2>
             <p className="text-xs text-muted-foreground">{cart.length} item(s) · {cart.reduce((s, i) => s + i.qty, 0)} units</p>
