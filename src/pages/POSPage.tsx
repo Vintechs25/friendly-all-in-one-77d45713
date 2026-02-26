@@ -330,7 +330,7 @@ export default function POSPage() {
     if (splitMode) {
       const allocated = payments.reduce((s, p) => s + p.amount, 0);
       if (allocated < total - 0.01) {
-        toast.error(`Payment short by $${(total - allocated).toFixed(2)}`);
+        toast.error(`Payment short by KSh ${(total - allocated).toFixed(2)}`);
         return;
       }
     }
