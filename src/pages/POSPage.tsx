@@ -543,7 +543,7 @@ export default function POSPage() {
 
       <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-11rem)] lg:h-[calc(100vh-8.5rem)]">
         {/* Products Panel */}
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        <div className={`flex-1 flex flex-col min-h-0 overflow-hidden ${mobileView !== "products" ? "hidden lg:flex" : "flex"}`}>
           <div className="flex items-center gap-3 mb-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
