@@ -41,6 +41,10 @@ const navItems = [
   { icon: RotateCcw, label: "Refunds", path: "/dashboard/refunds" },
   { icon: UserCheck, label: "Customers", path: "/dashboard/customers" },
   { icon: Clock, label: "Shifts", path: "/dashboard/shifts" },
+  { icon: Truck, label: "Suppliers", path: "/dashboard/suppliers" },
+  { icon: ClipboardList, label: "Purchase Orders", path: "/dashboard/purchase-orders" },
+  { icon: ClipboardMinus, label: "Stock Adjustments", path: "/dashboard/stock-adjustments" },
+  { icon: ArrowRightLeft, label: "Stock Transfers", path: "/dashboard/stock-transfers" },
   { icon: BarChart3, label: "Reports", path: "/dashboard/reports" },
   { icon: Settings, label: "Settings", path: "/dashboard/settings" },
 ];
