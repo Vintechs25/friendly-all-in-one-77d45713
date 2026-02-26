@@ -120,7 +120,7 @@ export default function AdminPlansPage() {
                 </div>
                 {plan.price_yearly > 0 && (
                   <p className="text-xs text-muted-foreground mt-4 pt-3 border-t border-border">
-                    ${plan.price_yearly}/yr (save {Math.round((1 - plan.price_yearly / (plan.price_monthly * 12)) * 100)}%)
+                    KSh {plan.price_yearly}/yr (save {Math.round((1 - plan.price_yearly / (plan.price_monthly * 12)) * 100)}%)
                   </p>
                 )}
               </div>
