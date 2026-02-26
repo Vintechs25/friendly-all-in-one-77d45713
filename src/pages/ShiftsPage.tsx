@@ -179,8 +179,8 @@ export default function ShiftsPage() {
     } finally { setSaving(false); }
   };
 
-  const fmt = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
-  const fmtTime = (iso: string) => new Date(iso).toLocaleString("en-US", {
+  const fmt = (n: number) => `KSh ${n.toLocaleString("en-KE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const fmtTime = (iso: string) => new Date(iso).toLocaleString("en-KE", {
     month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
   });
 
