@@ -163,7 +163,7 @@ export default function SplitPaymentPanel({
     } else {
       onPaymentsChange([{ method: "store_credit", amount: useAmount }]);
     }
-    toast.success(`Store credit applied: $${useAmount.toFixed(2)}`);
+    toast.success(`Store credit applied: KSh ${useAmount.toFixed(2)}`);
   };
 
   const selectMethod = (m: PaymentMethod) => {
