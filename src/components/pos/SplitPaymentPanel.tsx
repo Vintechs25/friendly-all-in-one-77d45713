@@ -149,7 +149,7 @@ export default function SplitPaymentPanel({
     setShowGiftCardDialog(false);
     setGiftCardCode("");
     setGiftCardBalance(null);
-    toast.success(`Gift card applied: $${useAmount.toFixed(2)}`);
+    toast.success(`Gift card applied: KSh ${useAmount.toFixed(2)}`);
   };
 
   const applyStoreCredit = () => {
