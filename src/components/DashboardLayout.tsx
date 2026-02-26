@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
+import type { Permission } from "@/hooks/usePermissions";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -24,6 +26,8 @@ import {
   ClipboardList,
   ClipboardMinus,
   ArrowRightLeft,
+  Shield,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,20 +37,29 @@ interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
-const navItems = [
+interface NavItem {
+  icon: any;
+  label: string;
+  path: string;
+  permission?: Permission;
+}
+
+const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-  { icon: ShoppingCart, label: "Point of Sale", path: "/dashboard/pos" },
-  { icon: Package, label: "Inventory", path: "/dashboard/inventory" },
-  { icon: Receipt, label: "Sales", path: "/dashboard/sales" },
-  { icon: RotateCcw, label: "Refunds", path: "/dashboard/refunds" },
-  { icon: UserCheck, label: "Customers", path: "/dashboard/customers" },
-  { icon: Clock, label: "Shifts", path: "/dashboard/shifts" },
-  { icon: Truck, label: "Suppliers", path: "/dashboard/suppliers" },
-  { icon: ClipboardList, label: "Purchase Orders", path: "/dashboard/purchase-orders" },
-  { icon: ClipboardMinus, label: "Stock Adjustments", path: "/dashboard/stock-adjustments" },
-  { icon: ArrowRightLeft, label: "Stock Transfers", path: "/dashboard/stock-transfers" },
-  { icon: BarChart3, label: "Reports", path: "/dashboard/reports" },
-  { icon: Settings, label: "Settings", path: "/dashboard/settings" },
+  { icon: ShoppingCart, label: "Point of Sale", path: "/dashboard/pos", permission: "manage_pos" },
+  { icon: Package, label: "Inventory", path: "/dashboard/inventory", permission: "manage_inventory" },
+  { icon: Receipt, label: "Sales", path: "/dashboard/sales", permission: "manage_sales" },
+  { icon: RotateCcw, label: "Refunds", path: "/dashboard/refunds", permission: "manage_refunds" },
+  { icon: UserCheck, label: "Customers", path: "/dashboard/customers", permission: "manage_customers" },
+  { icon: Clock, label: "Shifts", path: "/dashboard/shifts", permission: "manage_pos" },
+  { icon: Truck, label: "Suppliers", path: "/dashboard/suppliers", permission: "manage_suppliers" },
+  { icon: ClipboardList, label: "Purchase Orders", path: "/dashboard/purchase-orders", permission: "manage_purchase_orders" },
+  { icon: ClipboardMinus, label: "Stock Adjustments", path: "/dashboard/stock-adjustments", permission: "manage_stock" },
+  { icon: ArrowRightLeft, label: "Stock Transfers", path: "/dashboard/stock-transfers", permission: "manage_stock" },
+  { icon: BarChart3, label: "Reports", path: "/dashboard/reports", permission: "view_reports" },
+  { icon: Shield, label: "Team", path: "/dashboard/team", permission: "manage_team" },
+  { icon: FileText, label: "Audit Logs", path: "/dashboard/audit-logs", permission: "view_audit_logs" },
+  { icon: Settings, label: "Settings", path: "/dashboard/settings", permission: "manage_settings" },
 ];
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
