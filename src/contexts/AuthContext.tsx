@@ -114,9 +114,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const hasRole = (role: AppRole) => roles.includes(role);
 
+  const refreshProfile = async () => {
+    if (user) {
+      await fetchProfile(user.id);
+    }
+  };
+
   return (
     <AuthContext.Provider
-      value={{ session, user, profile, roles, loading, signUp, signIn, signOut, hasRole }}
+      value={{ session, user, profile, roles, loading, signUp, signIn, signOut, hasRole, refreshProfile }}
     >
       {children}
     </AuthContext.Provider>
