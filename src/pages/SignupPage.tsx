@@ -1,13 +1,98 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Zap, Eye, EyeOff } from "lucide-react";
+import { Zap, Eye, EyeOff, Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import type { Database } from "@/integrations/supabase/types";
+
+type IndustryType = Database["public"]["Enums"]["industry_type"];
 
 export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [businessName, setBusinessName] = useState("");
+  const [industry, setIndustry] = useState<IndustryType>("retail");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const { signUp } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!firstName || !businessName || !email || !password) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+    if (password.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await signUp(email, password, {
+        full_name: `${firstName} ${lastName}`.trim(),
+      });
+
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+
+      // Wait briefly for the trigger to create the profile
+      await new Promise((r) => setTimeout(r, 500));
+
+      // Get the current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Signup succeeded but session not found. Please log in.");
+        navigate("/login");
+        return;
+      }
+
+      // Create business
+      const { data: business, error: bizError } = await supabase
+        .from("businesses")
+        .insert({ name: businessName, industry, email })
+        .select()
+        .single();
+
+      if (bizError) {
+        toast.error("Failed to create business: " + bizError.message);
+        return;
+      }
+
+      // Create default branch
+      await supabase
+        .from("branches")
+        .insert({ business_id: business.id, name: "Main Branch" });
+
+      // Update profile with business_id
+      await supabase
+        .from("profiles")
+        .update({ business_id: business.id, full_name: `${firstName} ${lastName}`.trim() })
+        .eq("id", user.id);
+
+      // Assign business_owner role
+      await supabase
+        .from("user_roles")
+        .insert({ user_id: user.id, role: "business_owner", business_id: business.id });
+
+      toast.success("Account created successfully!");
+      navigate("/dashboard");
+    } catch (err: any) {
+      toast.error(err.message || "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex">
@@ -50,24 +135,24 @@ export default function SignupPage() {
           <h1 className="font-display text-2xl font-bold mb-1">Create your account</h1>
           <p className="text-muted-foreground text-sm mb-8">Get started with a 14-day free trial</p>
 
-          <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+          <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="firstName">First Name</Label>
-                <Input id="firstName" placeholder="John" />
+                <Input id="firstName" placeholder="John" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lastName">Last Name</Label>
-                <Input id="lastName" placeholder="Doe" />
+                <Input id="lastName" placeholder="Doe" value={lastName} onChange={(e) => setLastName(e.target.value)} />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="businessName">Business Name</Label>
-              <Input id="businessName" placeholder="My Business" />
+              <Input id="businessName" placeholder="My Business" value={businessName} onChange={(e) => setBusinessName(e.target.value)} required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="industry">Industry</Label>
-              <Select>
+              <Select value={industry} onValueChange={(v) => setIndustry(v as IndustryType)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select your industry" />
                 </SelectTrigger>
@@ -85,12 +170,12 @@ export default function SignupPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="you@business.com" />
+              <Input id="email" type="email" placeholder="you@business.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <div className="relative">
-                <Input id="password" type={showPassword ? "text" : "password"} placeholder="Create a password" />
+                <Input id="password" type={showPassword ? "text" : "password"} placeholder="Create a password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
@@ -100,7 +185,9 @@ export default function SignupPage() {
                 </button>
               </div>
             </div>
-            <Button className="w-full" type="submit">Create Account</Button>
+            <Button className="w-full" type="submit" disabled={loading}>
+              {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creating...</> : "Create Account"}
+            </Button>
           </form>
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
