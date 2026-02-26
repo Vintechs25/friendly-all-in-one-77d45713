@@ -68,6 +68,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { profile, signOut } = useAuth();
+  const { can } = usePermissions();
+
+  const visibleNavItems = navItems.filter((item) => !item.permission || can(item.permission));
 
   const initials = profile?.full_name
     ? profile.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
