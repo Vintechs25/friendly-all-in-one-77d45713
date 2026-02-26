@@ -1,36 +1,70 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Barcode, Minus, Trash2, CreditCard, Banknote, Smartphone } from "lucide-react";
-import { useState } from "react";
+import { Search, Plus, Barcode, Minus, Trash2, CreditCard, Banknote, Smartphone, Loader2, Package } from "lucide-react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import type { Tables } from "@/integrations/supabase/types";
+
+type Product = Tables<"products">;
+type PaymentMethod = "cash" | "card" | "mobile_money";
 
 interface CartItem {
   id: string;
   name: string;
   price: number;
+  cost: number;
+  tax_rate: number;
   qty: number;
+  track_inventory: boolean;
 }
-
-const sampleProducts = [
-  { id: "1", name: "Coca-Cola 500ml", price: 1.50, sku: "BEV-001" },
-  { id: "2", name: "White Bread", price: 1.50, sku: "BAK-001" },
-  { id: "3", name: "Cooking Oil 1L", price: 4.00, sku: "GRO-001" },
-  { id: "4", name: "Sugar 1kg", price: 1.40, sku: "GRO-002" },
-  { id: "5", name: "Milk 500ml", price: 1.20, sku: "DAI-001" },
-  { id: "6", name: "Rice 2kg", price: 3.50, sku: "GRO-003" },
-  { id: "7", name: "Eggs (Tray)", price: 4.50, sku: "DAI-002" },
-  { id: "8", name: "Butter 250g", price: 2.80, sku: "DAI-003" },
-];
 
 export default function POSPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [processing, setProcessing] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
+  const { user, profile } = useAuth();
 
-  const addToCart = (product: typeof sampleProducts[0]) => {
+  // Load products from database
+  useEffect(() => {
+    const loadProducts = async () => {
+      if (!profile?.business_id) return;
+      setLoadingProducts(true);
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("business_id", profile.business_id)
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) {
+        toast.error("Failed to load products");
+      } else {
+        setProducts(data ?? []);
+      }
+      setLoadingProducts(false);
+    };
+    loadProducts();
+  }, [profile?.business_id]);
+
+  const addToCart = (product: Product) => {
     setCart((prev) => {
       const existing = prev.find((i) => i.id === product.id);
       if (existing) return prev.map((i) => i.id === product.id ? { ...i, qty: i.qty + 1 } : i);
-      return [...prev, { id: product.id, name: product.name, price: product.price, qty: 1 }];
+      return [...prev, {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        cost: product.cost,
+        tax_rate: product.tax_rate,
+        qty: 1,
+        track_inventory: product.track_inventory,
+      }];
     });
   };
 
@@ -43,13 +77,127 @@ export default function POSPage() {
   const removeItem = (id: string) => setCart((prev) => prev.filter((i) => i.id !== id));
 
   const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
-  const tax = subtotal * 0.16;
-  const total = subtotal + tax;
+  const taxAmount = cart.reduce((s, i) => s + (i.price * i.qty * i.tax_rate / 100), 0);
+  const total = subtotal + taxAmount;
 
-  const filtered = sampleProducts.filter((p) =>
+  const filtered = products.filter((p) =>
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.sku.toLowerCase().includes(searchTerm.toLowerCase())
+    (p.sku ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.barcode ?? "").toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const completeSale = async () => {
+    if (!user || !profile?.business_id || cart.length === 0) return;
+
+    setProcessing(true);
+    try {
+      // Get the first branch for this business
+      const { data: branches } = await supabase
+        .from("branches")
+        .select("id")
+        .eq("business_id", profile.business_id)
+        .eq("is_active", true)
+        .limit(1);
+
+      const branchId = branches?.[0]?.id;
+      if (!branchId) {
+        toast.error("No active branch found");
+        return;
+      }
+
+      // Generate receipt number
+      const receiptNumber = `RCP-${Date.now().toString(36).toUpperCase()}`;
+
+      // Create sale record
+      const { data: sale, error: saleError } = await supabase
+        .from("sales")
+        .insert({
+          business_id: profile.business_id,
+          branch_id: branchId,
+          cashier_id: user.id,
+          receipt_number: receiptNumber,
+          subtotal,
+          tax_amount: taxAmount,
+          discount_amount: 0,
+          total,
+          payment_method: paymentMethod,
+          status: "completed",
+        })
+        .select()
+        .single();
+
+      if (saleError) {
+        toast.error("Failed to create sale: " + saleError.message);
+        return;
+      }
+
+      // Insert sale items
+      const saleItems = cart.map((item) => ({
+        sale_id: sale.id,
+        product_id: item.id,
+        product_name: item.name,
+        quantity: item.qty,
+        unit_price: item.price,
+        discount: 0,
+        tax_amount: item.price * item.qty * item.tax_rate / 100,
+        total: item.price * item.qty + (item.price * item.qty * item.tax_rate / 100),
+      }));
+
+      const { error: itemsError } = await supabase
+        .from("sale_items")
+        .insert(saleItems);
+
+      if (itemsError) {
+        toast.error("Failed to save sale items: " + itemsError.message);
+        return;
+      }
+
+      // Create payment record
+      await supabase
+        .from("payments")
+        .insert({
+          sale_id: sale.id,
+          method: paymentMethod,
+          amount: total,
+        });
+
+      // Update inventory for items that track it
+      for (const item of cart) {
+        if (!item.track_inventory) continue;
+
+        // Check if inventory record exists
+        const { data: inv } = await supabase
+          .from("inventory")
+          .select("id, quantity")
+          .eq("product_id", item.id)
+          .eq("branch_id", branchId)
+          .single();
+
+        if (inv) {
+          await supabase
+            .from("inventory")
+            .update({ quantity: Math.max(0, inv.quantity - item.qty) })
+            .eq("id", inv.id);
+        } else {
+          // Create inventory record with negative to show deduction
+          await supabase
+            .from("inventory")
+            .insert({
+              product_id: item.id,
+              branch_id: branchId,
+              quantity: 0,
+            });
+        }
+      }
+
+      toast.success(`Sale completed! Receipt: ${receiptNumber}`);
+      setCart([]);
+    } catch (err: any) {
+      toast.error(err.message || "An error occurred");
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   return (
     <DashboardLayout>
@@ -71,21 +219,42 @@ export default function POSPage() {
             </Button>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 overflow-y-auto flex-1">
-            {filtered.map((product) => (
-              <button
-                key={product.id}
-                onClick={() => addToCart(product)}
-                className="flex flex-col items-center justify-center rounded-xl border border-border bg-card p-4 hover:border-primary/40 hover:shadow-md transition-all text-center"
-              >
-                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
-                  <span className="text-xs font-bold text-primary">{product.sku.slice(0, 3)}</span>
-                </div>
-                <p className="text-sm font-medium leading-tight">{product.name}</p>
-                <p className="text-primary font-display font-bold mt-1">${product.price.toFixed(2)}</p>
-              </button>
-            ))}
-          </div>
+          {loadingProducts ? (
+            <div className="flex-1 flex items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
+              <Package className="h-12 w-12 mb-3 opacity-40" />
+              <p className="text-sm font-medium">
+                {products.length === 0 ? "No products yet" : "No matching products"}
+              </p>
+              <p className="text-xs mt-1">
+                {products.length === 0 ? "Add products in the Inventory module first" : "Try a different search term"}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 overflow-y-auto flex-1">
+              {filtered.map((product) => (
+                <button
+                  key={product.id}
+                  onClick={() => addToCart(product)}
+                  className="flex flex-col items-center justify-center rounded-xl border border-border bg-card p-4 hover:border-primary/40 hover:shadow-md transition-all text-center"
+                >
+                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
+                    <span className="text-xs font-bold text-primary">
+                      {(product.sku ?? product.name.slice(0, 3)).slice(0, 3).toUpperCase()}
+                    </span>
+                  </div>
+                  <p className="text-sm font-medium leading-tight">{product.name}</p>
+                  <p className="text-primary font-display font-bold mt-1">${product.price.toFixed(2)}</p>
+                  {product.tax_rate > 0 && (
+                    <p className="text-[10px] text-muted-foreground">+{product.tax_rate}% tax</p>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Cart */}
@@ -133,28 +302,45 @@ export default function POSPage() {
               <span>${subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Tax (16%)</span>
-              <span>${tax.toFixed(2)}</span>
+              <span className="text-muted-foreground">Tax</span>
+              <span>${taxAmount.toFixed(2)}</span>
             </div>
             <div className="flex justify-between font-display text-lg font-bold pt-2 border-t border-border">
               <span>Total</span>
               <span>${total.toFixed(2)}</span>
             </div>
             <div className="grid grid-cols-3 gap-2 pt-2">
-              <Button variant="outline" size="sm" className="flex-col h-auto py-2.5 gap-1">
+              <Button
+                variant={paymentMethod === "cash" ? "default" : "outline"}
+                size="sm"
+                className="flex-col h-auto py-2.5 gap-1"
+                onClick={() => setPaymentMethod("cash")}
+              >
                 <Banknote className="h-4 w-4" />
                 <span className="text-[10px]">Cash</span>
               </Button>
-              <Button variant="outline" size="sm" className="flex-col h-auto py-2.5 gap-1">
+              <Button
+                variant={paymentMethod === "card" ? "default" : "outline"}
+                size="sm"
+                className="flex-col h-auto py-2.5 gap-1"
+                onClick={() => setPaymentMethod("card")}
+              >
                 <CreditCard className="h-4 w-4" />
                 <span className="text-[10px]">Card</span>
               </Button>
-              <Button variant="outline" size="sm" className="flex-col h-auto py-2.5 gap-1">
+              <Button
+                variant={paymentMethod === "mobile_money" ? "default" : "outline"}
+                size="sm"
+                className="flex-col h-auto py-2.5 gap-1"
+                onClick={() => setPaymentMethod("mobile_money")}
+              >
                 <Smartphone className="h-4 w-4" />
                 <span className="text-[10px]">Mobile</span>
               </Button>
             </div>
-            <Button className="w-full" disabled={cart.length === 0}>Complete Sale</Button>
+            <Button className="w-full" disabled={cart.length === 0 || processing} onClick={completeSale}>
+              {processing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing...</> : "Complete Sale"}
+            </Button>
           </div>
         </div>
       </div>
