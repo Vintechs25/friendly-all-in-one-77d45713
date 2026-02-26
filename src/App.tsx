@@ -22,6 +22,8 @@ import SuppliersPage from "./pages/SuppliersPage";
 import PurchaseOrdersPage from "./pages/PurchaseOrdersPage";
 import StockAdjustmentsPage from "./pages/StockAdjustmentsPage";
 import StockTransfersPage from "./pages/StockTransfersPage";
+import TeamPage from "./pages/TeamPage";
+import AuditLogsPage from "./pages/AuditLogsPage";
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
 import AdminBusinessesPage from "./pages/admin/AdminBusinessesPage";
 import AdminPlansPage from "./pages/admin/AdminPlansPage";
