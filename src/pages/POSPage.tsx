@@ -398,10 +398,39 @@ export default function POSPage() {
             sale_id: sale.id,
             method: p.method,
             amount: p.amount,
+            reference: p.reference || null,
+            payment_status: p.method === "mobile_money" && p.reference ? "pending" : "confirmed",
+            mpesa_checkout_request_id: p.method === "mobile_money" ? p.reference || null : null,
           }))
-        : [{ sale_id: sale.id, method: payments[0]?.method ?? "cash" as PaymentMethod, amount: total }];
+        : [{
+            sale_id: sale.id,
+            method: (payments[0]?.method ?? "cash") as PaymentMethod,
+            amount: total,
+            reference: payments[0]?.reference || null,
+            payment_status: payments[0]?.method === "mobile_money" && payments[0]?.reference ? "pending" : "confirmed",
+            mpesa_checkout_request_id: payments[0]?.method === "mobile_money" ? payments[0]?.reference || null : null,
+          }];
 
       await supabase.from("payments").insert(paymentInserts);
+
+      // Deduct gift card balances
+      for (const p of payments) {
+        if (p.method === "gift_card" && p.reference && p.amount > 0 && profile?.business_id) {
+          const { data: gc } = await supabase
+            .from("gift_cards")
+            .select("id, balance")
+            .eq("business_id", profile.business_id)
+            .eq("code", p.reference)
+            .single();
+          if (gc) {
+            await supabase.from("gift_cards").update({ balance: Math.max(0, gc.balance - p.amount) }).eq("id", gc.id);
+          }
+        }
+        // Deduct store credit
+        if (p.method === "store_credit" && p.amount > 0) {
+          // store credit deduction would require customer_id — future enhancement
+        }
+      }
 
       // Decrement inventory
       for (const item of cart) {
