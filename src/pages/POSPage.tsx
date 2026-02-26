@@ -341,8 +341,8 @@ export default function POSPage() {
                 <span className="text-[10px]">Mobile</span>
               </Button>
             </div>
-            <Button className="w-full" disabled={cart.length === 0 || processing} onClick={completeSale}>
-              {processing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing...</> : "Complete Sale"}
+            <Button className="w-full" disabled={cart.length === 0 || processing || !canUsePOS} onClick={completeSale}>
+              {!canUsePOS ? "License Required" : processing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing...</> : "Complete Sale"}
             </Button>
           </div>
         </div>
