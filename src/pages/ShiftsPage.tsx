@@ -171,7 +171,7 @@ export default function ShiftsPage() {
         dropped_by: user.id,
       });
       if (error) { toast.error(error.message); return; }
-      toast.success(`Safe drop of $${amount.toFixed(2)} recorded`);
+      toast.success(`Safe drop of KSh ${amount.toFixed(2)} recorded`);
       setShowSafeDropDialog(false);
       setSafeDropAmount("");
       setSafeDropNotes("");
