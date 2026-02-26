@@ -414,7 +414,7 @@ export default function POSPage() {
         </div>
 
         {/* Cart */}
-        <div className="w-full lg:w-96 flex flex-col rounded-xl border border-border bg-card">
+        <div className="w-full lg:w-96 flex flex-col rounded-xl border border-border bg-card min-h-0 shrink-0 lg:max-h-full">
           <div className="p-4 border-b border-border">
             <h2 className="font-display font-semibold">Current Sale</h2>
             <p className="text-xs text-muted-foreground">{cart.length} item(s) · {cart.reduce((s, i) => s + i.qty, 0)} units</p>
