@@ -403,6 +403,26 @@ export default function InventoryPage() {
               <Label>Description</Label>
               <Input value={form.description} onChange={e => updateField("description", e.target.value)} placeholder="Optional description" />
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Expiry Date</Label>
+                <Input type="date" value={form.expiry_date} onChange={e => updateField("expiry_date", e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Batch Number</Label>
+                <Input value={form.batch_number} onChange={e => updateField("batch_number", e.target.value)} placeholder="e.g. BATCH-001" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Serial Number</Label>
+                <Input value={form.serial_number} onChange={e => updateField("serial_number", e.target.value)} placeholder="For electronics" />
+              </div>
+              <div className="space-y-2">
+                <Label>Minimum Price ($)</Label>
+                <Input type="number" step="0.01" min="0" value={form.minimum_price} onChange={e => updateField("minimum_price", e.target.value)} />
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
