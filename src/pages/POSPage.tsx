@@ -348,7 +348,7 @@ export default function POSPage() {
 
       const { data: business } = await supabase
         .from("businesses")
-        .select("name, address, phone")
+        .select("name, address, phone, email")
         .eq("id", profile.business_id)
         .single();
 
