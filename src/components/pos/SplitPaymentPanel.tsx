@@ -404,7 +404,7 @@ function MpesaDialog({
         <div className="space-y-3 py-2">
           <div className="rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 p-3 text-center">
             <p className="text-xs text-muted-foreground">Amount</p>
-            <p className="text-2xl font-bold text-green-700 dark:text-green-400">${amount.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-green-700 dark:text-green-400">KSh {amount.toFixed(2)}</p>
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Customer Phone Number</Label>
