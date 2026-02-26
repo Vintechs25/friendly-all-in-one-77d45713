@@ -515,15 +515,15 @@ export default function POSPage() {
       <LicenseBanner />
       <ReceiptPreviewDialog open={showReceipt} onOpenChange={setShowReceipt} data={receiptData} />
 
-      <div className="flex flex-col h-[calc(100vh-8.5rem)] max-w-2xl mx-auto">
-        {/* Search with autocomplete */}
-        <div className="relative mb-3">
+      <div className="flex flex-col h-[calc(100vh-6rem)]">
+        {/* Search bar with autocomplete */}
+        <div className="relative mb-3 max-w-xl">
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search product name, SKU, or barcode..."
-                className="pl-9 h-11"
+                className="pl-9 h-11 text-base"
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
@@ -546,8 +546,8 @@ export default function POSPage() {
 
           {/* Autocomplete dropdown */}
           {showSuggestions && filtered.length > 0 && (
-            <div className="absolute z-50 top-full left-0 right-0 mt-1 rounded-lg border border-border bg-card shadow-lg max-h-64 overflow-y-auto">
-              {filtered.slice(0, 8).map((product) => (
+            <div className="absolute z-50 top-full left-0 right-0 mt-1 rounded-lg border border-border bg-card shadow-lg max-h-72 overflow-y-auto">
+              {filtered.slice(0, 10).map((product) => (
                 <button
                   key={product.id}
                   onMouseDown={(e) => e.preventDefault()}
@@ -557,9 +557,9 @@ export default function POSPage() {
                     setSearchTerm("");
                     setShowSuggestions(false);
                   }}
-                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors text-left border-b border-border last:border-b-0"
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors text-left border-b border-border last:border-b-0"
                 >
-                  <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <div className="h-8 w-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
                     <span className="text-[10px] font-bold text-primary">
                       {(product.sku ?? product.name.slice(0, 3)).slice(0, 3).toUpperCase()}
                     </span>
@@ -574,9 +574,9 @@ export default function POSPage() {
                   <span className="text-sm font-bold text-primary whitespace-nowrap">KSh {product.price.toFixed(2)}</span>
                 </button>
               ))}
-              {filtered.length > 8 && (
+              {filtered.length > 10 && (
                 <p className="text-xs text-muted-foreground text-center py-2">
-                  +{filtered.length - 8} more results — keep typing to narrow down
+                  +{filtered.length - 10} more — keep typing to narrow down
                 </p>
               )}
             </div>
@@ -589,125 +589,132 @@ export default function POSPage() {
           )}
         </div>
 
-        {/* Cart / Sale Panel */}
-        <div className="flex-1 flex flex-col rounded-xl border border-border bg-card min-h-0">
-          <div className="p-4 border-b border-border flex items-center justify-between">
-            <div>
-              <h2 className="font-display font-semibold text-lg">Current Sale</h2>
-              <p className="text-xs text-muted-foreground">
-                {cart.length} item(s) · {cart.reduce((s, i) => s + i.qty, 0)} units
-              </p>
-            </div>
-            <div className="flex gap-1">
-              {cart.length > 0 && (
-                <>
-                  <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={holdTransaction}>
-                    <PauseCircle className="h-3.5 w-3.5" /> Hold
-                  </Button>
-                  <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-destructive" onClick={voidCurrentSale}>
-                    <XCircle className="h-3.5 w-3.5" /> Void
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Held sales */}
-          {heldSales.length > 0 && (
-            <div className="px-4 pt-3">
-              <HeldSalesPanel heldSales={heldSales} onResume={resumeHeldSale} onDelete={deleteHeldSale} />
-            </div>
-          )}
-
-          <div className="flex-1 overflow-y-auto p-4 space-y-2 min-h-0">
-            {cart.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                <Barcode className="h-10 w-10 mb-3 opacity-30" />
-                <p className="text-sm font-medium">No items yet</p>
-                <p className="text-xs mt-1">Search for a product above or scan a barcode</p>
+        {/* Main content: Cart items + Payment side-by-side on desktop */}
+        <div className="flex-1 flex flex-col lg:flex-row gap-4 min-h-0">
+          {/* Cart items list */}
+          <div className="flex-1 flex flex-col rounded-xl border border-border bg-card min-h-0">
+            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+              <div>
+                <h2 className="font-display font-semibold">Current Sale</h2>
+                <p className="text-xs text-muted-foreground">
+                  {cart.length} item(s) · {cart.reduce((s, i) => s + i.qty, 0)} units
+                </p>
               </div>
-            ) : (
-              cart.map((item) => (
-                <CartItemRow
-                  key={item.id}
-                  item={item}
-                  onUpdateQty={updateQty}
-                  onRemove={removeItem}
-                  onUpdateDiscount={updateItemDiscount}
-                  onPriceOverride={overridePrice}
-                  canOverridePrice={canOverridePrice}
-                />
-              ))
-            )}
-          </div>
-
-          {/* Totals & Payments */}
-          <div className="border-t border-border p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Subtotal</span>
-              <span className="text-sm">KSh {itemsSubtotal.toFixed(2)}</span>
+              <div className="flex gap-1">
+                {cart.length > 0 && (
+                  <>
+                    <Button variant="outline" size="sm" className="h-7 text-xs gap-1" onClick={holdTransaction}>
+                      <PauseCircle className="h-3.5 w-3.5" /> Hold
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-destructive" onClick={voidCurrentSale}>
+                      <XCircle className="h-3.5 w-3.5" /> Void
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] gap-1">
-                    <Percent className="h-3 w-3" /> Cart Discount
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-56 p-3 space-y-2" side="top">
-                  <Label className="text-xs">Cart Discount</Label>
-                  <div className="flex gap-1">
-                    <Button variant={cartDiscountType === "fixed" ? "default" : "outline"} size="sm" className="h-7 text-xs flex-1" onClick={() => setCartDiscountType("fixed")}>
-                      <DollarSign className="h-3 w-3 mr-1" /> Fixed
-                    </Button>
-                    <Button variant={cartDiscountType === "percent" ? "default" : "outline"} size="sm" className="h-7 text-xs flex-1" onClick={() => setCartDiscountType("percent")}>
-                      <Percent className="h-3 w-3 mr-1" /> %
-                    </Button>
-                  </div>
-                  <Input
-                    type="number"
-                    value={cartDiscount || ""}
-                    onChange={(e) => setCartDiscount(parseFloat(e.target.value) || 0)}
-                    placeholder="0"
-                    className="h-8"
-                    min="0"
+            {/* Held sales */}
+            {heldSales.length > 0 && (
+              <div className="px-4 pt-2">
+                <HeldSalesPanel heldSales={heldSales} onResume={resumeHeldSale} onDelete={deleteHeldSale} />
+              </div>
+            )}
+
+            {/* Cart items or empty state */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-1.5 min-h-0">
+              {cart.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                  <Barcode className="h-10 w-10 mb-3 opacity-20" />
+                  <p className="text-sm font-medium">No items yet</p>
+                  <p className="text-xs mt-1">Search for a product or scan a barcode</p>
+                </div>
+              ) : (
+                cart.map((item) => (
+                  <CartItemRow
+                    key={item.id}
+                    item={item}
+                    onUpdateQty={updateQty}
+                    onRemove={removeItem}
+                    onUpdateDiscount={updateItemDiscount}
+                    onPriceOverride={overridePrice}
+                    canOverridePrice={canOverridePrice}
                   />
-                </PopoverContent>
-              </Popover>
-              {cartDiscountAmount > 0 && (
-                <span className="text-xs text-destructive ml-auto">-KSh {cartDiscountAmount.toFixed(2)}</span>
+                ))
               )}
             </div>
+          </div>
 
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Tax</span>
-              <span>KSh {taxAmount.toFixed(2)}</span>
+          {/* Totals & Payment panel */}
+          <div className="w-full lg:w-80 xl:w-96 flex flex-col rounded-xl border border-border bg-card shrink-0">
+            <div className="p-4 space-y-3 flex-1 flex flex-col justify-end">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Subtotal</span>
+                <span className="text-sm font-medium">KSh {itemsSubtotal.toFixed(2)}</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] gap-1">
+                      <Percent className="h-3 w-3" /> Cart Discount
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-56 p-3 space-y-2" side="top">
+                    <Label className="text-xs">Cart Discount</Label>
+                    <div className="flex gap-1">
+                      <Button variant={cartDiscountType === "fixed" ? "default" : "outline"} size="sm" className="h-7 text-xs flex-1" onClick={() => setCartDiscountType("fixed")}>
+                        <DollarSign className="h-3 w-3 mr-1" /> Fixed
+                      </Button>
+                      <Button variant={cartDiscountType === "percent" ? "default" : "outline"} size="sm" className="h-7 text-xs flex-1" onClick={() => setCartDiscountType("percent")}>
+                        <Percent className="h-3 w-3 mr-1" /> %
+                      </Button>
+                    </div>
+                    <Input
+                      type="number"
+                      value={cartDiscount || ""}
+                      onChange={(e) => setCartDiscount(parseFloat(e.target.value) || 0)}
+                      placeholder="0"
+                      className="h-8"
+                      min="0"
+                    />
+                  </PopoverContent>
+                </Popover>
+                {cartDiscountAmount > 0 && (
+                  <span className="text-xs text-destructive ml-auto">-KSh {cartDiscountAmount.toFixed(2)}</span>
+                )}
+              </div>
+
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Tax</span>
+                <span className="font-medium">KSh {taxAmount.toFixed(2)}</span>
+              </div>
+
+              <div className="flex justify-between font-display text-xl font-bold pt-3 border-t border-border">
+                <span>Total</span>
+                <span>KSh {total.toFixed(2)}</span>
+              </div>
+
+              <SplitPaymentPanel
+                total={total}
+                payments={payments}
+                onPaymentsChange={setPayments}
+                splitMode={splitMode}
+                onToggleSplit={() => {
+                  setSplitMode(!splitMode);
+                  if (!splitMode) {
+                    setPayments([{ method: "cash", amount: total }]);
+                  }
+                }}
+                cashTendered={cashTendered}
+                onCashTenderedChange={setCashTendered}
+                businessId={profile?.business_id ?? null}
+              />
+
+              <Button className="w-full h-12 text-base font-semibold" disabled={cart.length === 0 || processing || !canUsePOS} onClick={completeSale}>
+                {!canUsePOS ? "License Required" : processing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing...</> : "Complete Sale"}
+              </Button>
             </div>
-            <div className="flex justify-between font-display text-lg font-bold pt-2 border-t border-border">
-              <span>Total</span>
-              <span>KSh {total.toFixed(2)}</span>
-            </div>
-
-            <SplitPaymentPanel
-              total={total}
-              payments={payments}
-              onPaymentsChange={setPayments}
-              splitMode={splitMode}
-              onToggleSplit={() => {
-                setSplitMode(!splitMode);
-                if (!splitMode) {
-                  setPayments([{ method: "cash", amount: total }]);
-                }
-              }}
-              cashTendered={cashTendered}
-              onCashTenderedChange={setCashTendered}
-              businessId={profile?.business_id ?? null}
-            />
-
-            <Button className="w-full h-12 text-base" disabled={cart.length === 0 || processing || !canUsePOS} onClick={completeSale}>
-              {!canUsePOS ? "License Required" : processing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processing...</> : "Complete Sale"}
-            </Button>
           </div>
         </div>
       </div>
