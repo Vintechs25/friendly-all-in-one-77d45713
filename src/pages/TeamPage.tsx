@@ -107,7 +107,7 @@ export default function TeamPage() {
     },
   });
 
-  // Invite mutation
+  // Invite mutation — uses edge function to avoid session switching & RLS issues
   const inviteMutation = useMutation({
     mutationFn: async () => {
       if (!businessId) throw new Error("No business found");
@@ -118,40 +118,19 @@ export default function TeamPage() {
         throw new Error("Cannot assign a role at or above your hierarchy level");
       }
 
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: inviteEmail,
-        password: invitePassword,
-        options: { data: { full_name: inviteName } },
+      const { data, error } = await supabase.functions.invoke("manage-team", {
+        body: {
+          action: "add_member",
+          email: inviteEmail,
+          password: invitePassword,
+          full_name: inviteName,
+          role: inviteRole,
+          business_id: businessId,
+        },
       });
-      if (signUpError) throw signUpError;
-      const newUserId = signUpData.user?.id;
-      if (!newUserId) throw new Error("Failed to create user");
 
-      await new Promise((r) => setTimeout(r, 500));
-
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({ business_id: businessId, full_name: inviteName })
-        .eq("id", newUserId);
-      if (profileError) throw profileError;
-
-      const { error: roleError } = await supabase.from("user_roles").insert({
-        user_id: newUserId,
-        role: inviteRole,
-        business_id: businessId,
-        hierarchy_level: ROLE_HIERARCHY[inviteRole] ?? 5,
-      });
-      if (roleError) throw roleError;
-
-      // Audit log
-      await supabase.from("audit_logs").insert({
-        action: "user_created",
-        table_name: "profiles",
-        record_id: newUserId,
-        business_id: businessId,
-        user_id: user?.id,
-        new_data: { email: inviteEmail, role: inviteRole, name: inviteName } as any,
-      });
+      if (error) throw new Error(error.message || "Failed to add team member");
+      if (data?.error) throw new Error(data.error);
     },
     onSuccess: () => {
       toast.success("Team member added successfully");

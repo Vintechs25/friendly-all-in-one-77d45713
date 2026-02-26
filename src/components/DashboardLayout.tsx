@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBranding } from "@/contexts/BrandingContext";
+import { useLicense, LicenseBanner } from "@/contexts/LicenseContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import type { Permission } from "@/hooks/usePermissions";
 import {
@@ -27,8 +28,9 @@ import {
   ArrowRightLeft,
   Shield,
   FileText,
+  X,
+  Store,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import NotificationCenter from "@/components/NotificationCenter";
@@ -42,24 +44,25 @@ interface NavItem {
   label: string;
   path: string;
   permission?: Permission;
+  group: string;
 }
 
 const navItems: NavItem[] = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-  { icon: ShoppingCart, label: "Point of Sale", path: "/dashboard/pos", permission: "manage_pos" },
-  { icon: Package, label: "Inventory", path: "/dashboard/inventory", permission: "manage_inventory" },
-  { icon: Receipt, label: "Sales", path: "/dashboard/sales", permission: "manage_sales" },
-  { icon: RotateCcw, label: "Refunds", path: "/dashboard/refunds", permission: "manage_refunds" },
-  { icon: UserCheck, label: "Customers", path: "/dashboard/customers", permission: "manage_customers" },
-  { icon: Clock, label: "Shifts", path: "/dashboard/shifts", permission: "manage_pos" },
-  { icon: Truck, label: "Suppliers", path: "/dashboard/suppliers", permission: "manage_suppliers" },
-  { icon: ClipboardList, label: "Purchase Orders", path: "/dashboard/purchase-orders", permission: "manage_purchase_orders" },
-  { icon: ClipboardMinus, label: "Stock Adjustments", path: "/dashboard/stock-adjustments", permission: "manage_stock" },
-  { icon: ArrowRightLeft, label: "Stock Transfers", path: "/dashboard/stock-transfers", permission: "manage_stock" },
-  { icon: BarChart3, label: "Reports", path: "/dashboard/reports", permission: "view_reports" },
-  { icon: Shield, label: "Team", path: "/dashboard/team", permission: "manage_team" },
-  { icon: FileText, label: "Audit Logs", path: "/dashboard/audit-logs", permission: "view_audit_logs" },
-  { icon: Settings, label: "Settings", path: "/dashboard/settings", permission: "manage_settings" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard", group: "Main" },
+  { icon: ShoppingCart, label: "Point of Sale", path: "/dashboard/pos", permission: "manage_pos", group: "Main" },
+  { icon: Receipt, label: "Sales", path: "/dashboard/sales", permission: "manage_sales", group: "Sales" },
+  { icon: RotateCcw, label: "Refunds", path: "/dashboard/refunds", permission: "manage_refunds", group: "Sales" },
+  { icon: UserCheck, label: "Customers", path: "/dashboard/customers", permission: "manage_customers", group: "Sales" },
+  { icon: Clock, label: "Shifts", path: "/dashboard/shifts", permission: "manage_pos", group: "Sales" },
+  { icon: Package, label: "Inventory", path: "/dashboard/inventory", permission: "manage_inventory", group: "Stock" },
+  { icon: Truck, label: "Suppliers", path: "/dashboard/suppliers", permission: "manage_suppliers", group: "Stock" },
+  { icon: ClipboardList, label: "Purchase Orders", path: "/dashboard/purchase-orders", permission: "manage_purchase_orders", group: "Stock" },
+  { icon: ClipboardMinus, label: "Adjustments", path: "/dashboard/stock-adjustments", permission: "manage_stock", group: "Stock" },
+  { icon: ArrowRightLeft, label: "Transfers", path: "/dashboard/stock-transfers", permission: "manage_stock", group: "Stock" },
+  { icon: BarChart3, label: "Reports", path: "/dashboard/reports", permission: "view_reports", group: "Admin" },
+  { icon: Users, label: "Team", path: "/dashboard/team", permission: "manage_team", group: "Admin" },
+  { icon: FileText, label: "Audit Logs", path: "/dashboard/audit-logs", permission: "view_audit_logs", group: "Admin" },
+  { icon: Settings, label: "Settings", path: "/dashboard/settings", permission: "manage_settings", group: "Admin" },
 ];
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
@@ -70,8 +73,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { profile, signOut } = useAuth();
   const { can } = usePermissions();
   const { branding } = useBranding();
+  const { licenseState } = useLicense();
 
   const visibleNavItems = navItems.filter((item) => !item.permission || can(item.permission));
+
+  // Group items
+  const groups = ["Main", "Sales", "Stock", "Admin"];
+  const groupedItems = groups.map((g) => ({
+    label: g,
+    items: visibleNavItems.filter((i) => i.group === g),
+  })).filter((g) => g.items.length > 0);
 
   const initials = profile?.full_name
     ? profile.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
@@ -93,71 +104,90 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       <aside
         className={cn(
           "fixed lg:static inset-y-0 left-0 z-50 flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300",
-          collapsed ? "w-[68px]" : "w-64",
+          collapsed ? "w-[68px]" : "w-60",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
       >
         {/* Logo / Business Branding */}
-        <div className="flex h-16 items-center px-4 gap-2 border-b border-sidebar-border">
+        <div className="flex h-14 items-center px-3 gap-2 border-b border-sidebar-border">
           {branding.logoUrl ? (
             <img
               src={branding.logoUrl}
               alt={branding.businessName}
-              className="h-9 w-9 shrink-0 rounded-lg object-cover"
+              className="h-8 w-8 shrink-0 rounded-lg object-cover"
             />
           ) : (
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary">
-              <Zap className="h-5 w-5 text-sidebar-primary-foreground" />
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary">
+              <Store className="h-4 w-4 text-sidebar-primary-foreground" />
             </div>
           )}
           {!collapsed && (
-            <span className="font-display text-lg font-bold text-sidebar-accent-foreground truncate">
-              {branding.businessName}
-            </span>
+            <div className="flex-1 min-w-0">
+              <span className="font-display text-sm font-bold text-sidebar-accent-foreground truncate block leading-tight">
+                {branding.businessName}
+              </span>
+              <span className="text-[10px] text-sidebar-foreground/50 leading-tight">
+                {licenseState === "active" ? "Licensed" : licenseState === "grace" ? "Offline" : "Trial"}
+              </span>
+            </div>
           )}
+          <button className="lg:hidden ml-auto text-sidebar-foreground" onClick={() => setMobileOpen(false)}>
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-          {visibleNavItems.map((item) => {
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
-                )}
-              >
-                <item.icon className="h-5 w-5 shrink-0" />
-                {!collapsed && <span>{item.label}</span>}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-3">
+          {groupedItems.map((group) => (
+            <div key={group.label}>
+              {!collapsed && (
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40 px-2 mb-1">
+                  {group.label}
+                </p>
+              )}
+              <div className="space-y-0.5">
+                {group.items.map((item) => {
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setMobileOpen(false)}
+                      className={cn(
+                        "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium transition-colors",
+                        isActive
+                          ? "bg-sidebar-primary/15 text-sidebar-primary"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                      )}
+                    >
+                      <item.icon className="h-4 w-4 shrink-0" />
+                      {!collapsed && <span>{item.label}</span>}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
         {/* Bottom */}
-        <div className="border-t border-sidebar-border p-3 space-y-1">
-          {/* Platform watermark */}
+        <div className="border-t border-sidebar-border p-2 space-y-0.5">
           {branding.platformWatermark && !collapsed && (
-            <p className="text-[10px] text-sidebar-foreground/40 text-center pb-1">
+            <p className="text-[9px] text-sidebar-foreground/30 text-center pb-1">
               Powered by SwiftPOS
             </p>
           )}
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="hidden lg:flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
+            className="hidden lg:flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
           >
-            {collapsed ? <ChevronRight className="h-5 w-5" /> : <><ChevronLeft className="h-5 w-5" /><span>Collapse</span></>}
+            {collapsed ? <ChevronRight className="h-4 w-4" /> : <><ChevronLeft className="h-4 w-4" /><span>Collapse</span></>}
           </button>
           <button
             onClick={handleSignOut}
-            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors w-full"
+            className="flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors w-full"
           >
-            <LogOut className="h-5 w-5 shrink-0" />
+            <LogOut className="h-4 w-4 shrink-0" />
             {!collapsed && <span>Sign Out</span>}
           </button>
         </div>
@@ -166,23 +196,26 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Main */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="flex h-16 items-center justify-between border-b border-border px-4 md:px-6 bg-card">
+        <header className="flex h-14 items-center justify-between border-b border-border px-4 md:px-6 bg-card shrink-0">
           <div className="flex items-center gap-3">
             <button className="lg:hidden" onClick={() => setMobileOpen(true)}>
               <Menu className="h-5 w-5" />
             </button>
             <div className="relative hidden md:block">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search..." className="pl-9 w-64 h-9 bg-background" />
+              <Input placeholder="Search..." className="pl-9 w-56 h-8 text-sm bg-background" />
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <NotificationCenter />
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-semibold">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
               {initials}
             </div>
           </div>
         </header>
+
+        {/* License Banner */}
+        <LicenseBanner />
 
         {/* Content */}
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
