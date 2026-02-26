@@ -325,7 +325,7 @@ export default function POSPage() {
         onOpenChange={setShowReceipt}
         data={receiptData}
       />
-      <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-7rem)]">
+      <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-8.5rem)]">
         {/* Products */}
         <div className="flex-1 flex flex-col min-h-0">
           <div className="flex items-center gap-3 mb-3">
