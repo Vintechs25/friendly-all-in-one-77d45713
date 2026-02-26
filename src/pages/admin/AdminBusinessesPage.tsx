@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Search, Loader2, Building2, ToggleLeft, ToggleRight, Plus } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { Search, Loader2, Building2, ToggleLeft, ToggleRight, Plus, Upload, Palette } from "lucide-react";
 import { toast } from "sonner";
 import type { Tables, Database } from "@/integrations/supabase/types";
 
@@ -19,14 +21,29 @@ export default function AdminBusinessesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterPlan, setFilterPlan] = useState("all");
 
-  // Provision dialog state
+  // Provision state
   const [provisionOpen, setProvisionOpen] = useState(false);
   const [provisionLoading, setProvisionLoading] = useState(false);
+  // Business
   const [bizName, setBizName] = useState("");
   const [bizIndustry, setBizIndustry] = useState<IndustryType>("supermarket");
   const [bizEmail, setBizEmail] = useState("");
   const [bizPhone, setBizPhone] = useState("");
   const [bizAddress, setBizAddress] = useState("");
+  // Branding
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [primaryColor, setPrimaryColor] = useState("160 84% 39%");
+  const [secondaryColor, setSecondaryColor] = useState("220 60% 50%");
+  const [invoicePrefix, setInvoicePrefix] = useState("INV");
+  const [receiptFooter, setReceiptFooter] = useState("Thank you for shopping with us!");
+  const [currencyCode, setCurrencyCode] = useState("KES");
+  const [currencySymbol, setCurrencySymbol] = useState("KSh");
+  const [taxLabel, setTaxLabel] = useState("VAT");
+  const [taxRate, setTaxRate] = useState("16");
+  const [branchName, setBranchName] = useState("Main Branch");
+  const [platformWatermark, setPlatformWatermark] = useState(true);
+  // Owner
   const [ownerName, setOwnerName] = useState("");
   const [ownerEmail, setOwnerEmail] = useState("");
   const [ownerPassword, setOwnerPassword] = useState("");
@@ -37,7 +54,6 @@ export default function AdminBusinessesPage() {
       .from("businesses")
       .select("*")
       .order("created_at", { ascending: false });
-
     if (error) toast.error(error.message);
     else setBusinesses(data ?? []);
     setLoading(false);
@@ -50,7 +66,6 @@ export default function AdminBusinessesPage() {
       .from("businesses")
       .update({ is_active: !biz.is_active })
       .eq("id", biz.id);
-
     if (error) toast.error(error.message);
     else {
       toast.success(`${biz.name} ${biz.is_active ? "suspended" : "activated"}`);
@@ -63,18 +78,24 @@ export default function AdminBusinessesPage() {
       .from("businesses")
       .update({ subscription_plan: plan as any })
       .eq("id", bizId);
-
     if (error) toast.error(error.message);
-    else {
-      toast.success("Plan updated");
-      loadBusinesses();
-    }
+    else { toast.success("Plan updated"); loadBusinesses(); }
   };
 
-  /** Provision a new business + owner account */
+  const handleLogoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Logo must be under 2MB");
+      return;
+    }
+    setLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
+  };
+
   const handleProvision = async () => {
     if (!bizName || !ownerEmail || !ownerPassword || !ownerName) {
-      toast.error("Please fill in all required fields");
+      toast.error("Please fill all required fields");
       return;
     }
     if (ownerPassword.length < 6) {
@@ -84,7 +105,7 @@ export default function AdminBusinessesPage() {
 
     setProvisionLoading(true);
     try {
-      // 1. Create the business
+      // 1. Create business
       const { data: business, error: bizError } = await supabase
         .from("businesses")
         .insert({
@@ -96,81 +117,113 @@ export default function AdminBusinessesPage() {
         })
         .select()
         .single();
+      if (bizError) throw new Error("Business creation failed: " + bizError.message);
 
-      if (bizError) throw new Error("Failed to create business: " + bizError.message);
+      // 2. Upload logo if provided
+      let logoUrl: string | null = null;
+      if (logoFile) {
+        const ext = logoFile.name.split(".").pop();
+        const path = `${business.id}/logo.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from("business-logos")
+          .upload(path, logoFile, { upsert: true });
+        if (uploadError) {
+          console.error("Logo upload failed:", uploadError);
+        } else {
+          const { data: urlData } = supabase.storage
+            .from("business-logos")
+            .getPublicUrl(path);
+          logoUrl = urlData.publicUrl;
+          // Update business logo_url
+          await supabase.from("businesses").update({ logo_url: logoUrl }).eq("id", business.id);
+        }
+      }
 
-      // 2. Create default "Main Branch"
-      const { data: branch, error: branchError } = await supabase
+      // 3. Create business settings (branding)
+      await supabase.from("business_settings").insert({
+        business_id: business.id,
+        logo_url: logoUrl,
+        primary_color: primaryColor,
+        secondary_color: secondaryColor,
+        invoice_prefix: invoicePrefix,
+        receipt_footer_text: receiptFooter,
+        currency_code: currencyCode,
+        currency_symbol: currencySymbol,
+        default_tax_label: taxLabel,
+        default_tax_rate: parseFloat(taxRate) || 16,
+        platform_watermark: platformWatermark,
+      });
+
+      // 4. Create branch
+      const { data: branch } = await supabase
         .from("branches")
-        .insert({ business_id: business.id, name: "Main Branch" })
+        .insert({ business_id: business.id, name: branchName || "Main Branch" })
         .select()
         .single();
 
-      if (branchError) throw new Error("Failed to create branch: " + branchError.message);
-
-      // 3. Create the Business Owner auth account
+      // 5. Create owner account
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: ownerEmail,
         password: ownerPassword,
         options: { data: { full_name: ownerName } },
       });
-
-      if (signUpError) throw new Error("Failed to create owner account: " + signUpError.message);
+      if (signUpError) throw new Error("Owner account failed: " + signUpError.message);
       const ownerId = signUpData.user?.id;
       if (!ownerId) throw new Error("User creation returned no ID");
 
-      // Wait for trigger to create profile
       await new Promise((r) => setTimeout(r, 800));
 
-      // 4. Link owner profile to business
-      const { error: profileError } = await supabase
+      // 6. Link profile
+      await supabase
         .from("profiles")
         .update({ business_id: business.id, full_name: ownerName })
         .eq("id", ownerId);
 
-      if (profileError) throw new Error("Failed to link profile: " + profileError.message);
+      // 7. Assign role
+      await supabase.from("user_roles").insert({
+        user_id: ownerId,
+        role: "business_owner" as any,
+        business_id: business.id,
+        hierarchy_level: 2,
+      });
 
-      // 5. Assign business_owner role with hierarchy level 2
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .insert({
-          user_id: ownerId,
-          role: "business_owner" as any,
-          business_id: business.id,
-          hierarchy_level: 2,
-        });
-
-      if (roleError) throw new Error("Failed to assign role: " + roleError.message);
-
-      // 6. Log audit entry
+      // 8. Audit log
       await supabase.from("audit_logs").insert({
         action: "business_provisioned",
         table_name: "businesses",
         record_id: business.id,
-        new_data: { business_name: bizName, owner_email: ownerEmail } as any,
         business_id: business.id,
+        new_data: {
+          business_name: bizName,
+          owner_email: ownerEmail,
+          industry: bizIndustry,
+          branding: { primaryColor, secondaryColor, invoicePrefix, currencyCode, taxLabel },
+        } as any,
       });
 
-      toast.success(`Business "${bizName}" provisioned successfully!`, {
+      toast.success(`"${bizName}" provisioned successfully!`, {
         description: `Owner: ${ownerEmail}`,
       });
 
-      // Reset form
+      // Reset
       setProvisionOpen(false);
-      setBizName("");
-      setBizIndustry("supermarket");
-      setBizEmail("");
-      setBizPhone("");
-      setBizAddress("");
-      setOwnerName("");
-      setOwnerEmail("");
-      setOwnerPassword("");
+      resetForm();
       loadBusinesses();
     } catch (err: any) {
       toast.error(err.message);
     } finally {
       setProvisionLoading(false);
     }
+  };
+
+  const resetForm = () => {
+    setBizName(""); setBizIndustry("supermarket"); setBizEmail(""); setBizPhone(""); setBizAddress("");
+    setLogoFile(null); setLogoPreview(null);
+    setPrimaryColor("160 84% 39%"); setSecondaryColor("220 60% 50%");
+    setInvoicePrefix("INV"); setReceiptFooter("Thank you for shopping with us!");
+    setCurrencyCode("KES"); setCurrencySymbol("KSh"); setTaxLabel("VAT"); setTaxRate("16");
+    setBranchName("Main Branch"); setPlatformWatermark(true);
+    setOwnerName(""); setOwnerEmail(""); setOwnerPassword("");
   };
 
   const filtered = businesses.filter(b => {
@@ -192,18 +245,20 @@ export default function AdminBusinessesPage() {
             <DialogTrigger asChild>
               <Button><Plus className="h-4 w-4 mr-2" /> Provision Business</Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Provision New Business</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 pt-2">
-                <p className="text-sm text-muted-foreground">
-                  This will create a new tenant business and its owner account.
-                </p>
 
-                {/* Business details */}
-                <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-foreground">Business Details</h3>
+              <Tabs defaultValue="details" className="pt-2">
+                <TabsList className="w-full">
+                  <TabsTrigger value="details" className="flex-1">Business Details</TabsTrigger>
+                  <TabsTrigger value="branding" className="flex-1">Branding & Config</TabsTrigger>
+                  <TabsTrigger value="owner" className="flex-1">Owner Account</TabsTrigger>
+                </TabsList>
+
+                {/* ── Tab 1: Business Details ── */}
+                <TabsContent value="details" className="space-y-4 pt-2">
                   <div className="space-y-2">
                     <Label>Business Name *</Label>
                     <Input value={bizName} onChange={(e) => setBizName(e.target.value)} placeholder="Naivas Supermarket" />
@@ -213,14 +268,9 @@ export default function AdminBusinessesPage() {
                     <Select value={bizIndustry} onValueChange={(v) => setBizIndustry(v as IndustryType)}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="retail">Retail Store</SelectItem>
-                        <SelectItem value="supermarket">Supermarket</SelectItem>
-                        <SelectItem value="hardware">Hardware Shop</SelectItem>
-                        <SelectItem value="hotel">Hotel</SelectItem>
-                        <SelectItem value="restaurant">Restaurant</SelectItem>
-                        <SelectItem value="pharmacy">Pharmacy</SelectItem>
-                        <SelectItem value="wholesale">Wholesale</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
+                        {["retail", "supermarket", "hardware", "hotel", "restaurant", "pharmacy", "wholesale", "other"].map((v) => (
+                          <SelectItem key={v} value={v} className="capitalize">{v}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -238,11 +288,98 @@ export default function AdminBusinessesPage() {
                     <Label>Address</Label>
                     <Input value={bizAddress} onChange={(e) => setBizAddress(e.target.value)} placeholder="Nairobi, Kenya" />
                   </div>
-                </div>
+                  <div className="space-y-2">
+                    <Label>Default Branch Name</Label>
+                    <Input value={branchName} onChange={(e) => setBranchName(e.target.value)} placeholder="Main Branch" />
+                  </div>
+                </TabsContent>
 
-                {/* Owner details */}
-                <div className="space-y-3 border-t border-border pt-4">
-                  <h3 className="text-sm font-semibold text-foreground">Business Owner Account</h3>
+                {/* ── Tab 2: Branding ── */}
+                <TabsContent value="branding" className="space-y-4 pt-2">
+                  {/* Logo Upload */}
+                  <div className="space-y-2">
+                    <Label>Business Logo</Label>
+                    <div className="flex items-center gap-4">
+                      {logoPreview ? (
+                        <img src={logoPreview} alt="Logo preview" className="h-16 w-16 rounded-lg object-cover border border-border" />
+                      ) : (
+                        <div className="h-16 w-16 rounded-lg border-2 border-dashed border-border flex items-center justify-center">
+                          <Upload className="h-6 w-6 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div>
+                        <input type="file" accept="image/*" className="hidden" id="logo-upload" onChange={handleLogoSelect} />
+                        <Button variant="outline" size="sm" asChild>
+                          <label htmlFor="logo-upload" className="cursor-pointer">
+                            <Upload className="h-4 w-4 mr-1" /> Upload Logo
+                          </label>
+                        </Button>
+                        <p className="text-xs text-muted-foreground mt-1">Max 2MB. PNG or JPG.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Colors */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-1"><Palette className="h-3 w-3" /> Primary Color (HSL)</Label>
+                      <Input value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} placeholder="160 84% 39%" />
+                      <div className="h-6 rounded border border-border" style={{ backgroundColor: `hsl(${primaryColor})` }} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-1"><Palette className="h-3 w-3" /> Secondary Color (HSL)</Label>
+                      <Input value={secondaryColor} onChange={(e) => setSecondaryColor(e.target.value)} placeholder="220 60% 50%" />
+                      <div className="h-6 rounded border border-border" style={{ backgroundColor: `hsl(${secondaryColor})` }} />
+                    </div>
+                  </div>
+
+                  {/* Invoice & Receipt */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label>Invoice Prefix</Label>
+                      <Input value={invoicePrefix} onChange={(e) => setInvoicePrefix(e.target.value)} placeholder="INV" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Receipt Footer</Label>
+                      <Input value={receiptFooter} onChange={(e) => setReceiptFooter(e.target.value)} placeholder="Thank you!" />
+                    </div>
+                  </div>
+
+                  {/* Currency & Tax */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-2">
+                      <Label>Currency Code</Label>
+                      <Input value={currencyCode} onChange={(e) => setCurrencyCode(e.target.value)} placeholder="KES" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Currency Symbol</Label>
+                      <Input value={currencySymbol} onChange={(e) => setCurrencySymbol(e.target.value)} placeholder="KSh" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Tax Rate (%)</Label>
+                      <Input type="number" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} placeholder="16" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Default Tax Label</Label>
+                    <Input value={taxLabel} onChange={(e) => setTaxLabel(e.target.value)} placeholder="VAT" />
+                  </div>
+
+                  {/* Platform watermark toggle */}
+                  <div className="flex items-center justify-between rounded-lg border border-border p-3">
+                    <div>
+                      <p className="text-sm font-medium">Platform Watermark</p>
+                      <p className="text-xs text-muted-foreground">Show "Powered by SwiftPOS" in sidebar</p>
+                    </div>
+                    <Switch checked={platformWatermark} onCheckedChange={setPlatformWatermark} />
+                  </div>
+                </TabsContent>
+
+                {/* ── Tab 3: Owner Account ── */}
+                <TabsContent value="owner" className="space-y-4 pt-2">
+                  <p className="text-sm text-muted-foreground">
+                    This account will be the Business Owner with full control over the tenant.
+                  </p>
                   <div className="space-y-2">
                     <Label>Full Name *</Label>
                     <Input value={ownerName} onChange={(e) => setOwnerName(e.target.value)} placeholder="John Kamau" />
@@ -255,29 +392,28 @@ export default function AdminBusinessesPage() {
                     <Label>Password *</Label>
                     <Input type="password" value={ownerPassword} onChange={(e) => setOwnerPassword(e.target.value)} placeholder="Min 6 characters" />
                   </div>
-                </div>
 
-                <Button
-                  className="w-full"
-                  onClick={handleProvision}
-                  disabled={provisionLoading || !bizName || !ownerEmail || !ownerPassword || !ownerName}
-                >
-                  {provisionLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Provisioning...</> : "Provision Business"}
-                </Button>
-              </div>
+                  <Button
+                    className="w-full"
+                    onClick={handleProvision}
+                    disabled={provisionLoading || !bizName || !ownerEmail || !ownerPassword || !ownerName}
+                  >
+                    {provisionLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Provisioning...</> : "Provision Business"}
+                  </Button>
+                </TabsContent>
+              </Tabs>
             </DialogContent>
           </Dialog>
         </div>
 
+        {/* Search & Filter */}
         <div className="flex items-center gap-3 flex-wrap">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Search businesses..." className="pl-9" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
           </div>
           <Select value={filterPlan} onValueChange={setFilterPlan}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue />
-            </SelectTrigger>
+            <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Plans</SelectItem>
               <SelectItem value="trial">Trial</SelectItem>
@@ -288,6 +424,7 @@ export default function AdminBusinessesPage() {
           </Select>
         </div>
 
+        {/* Table */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -315,14 +452,23 @@ export default function AdminBusinessesPage() {
                 <tbody>
                   {filtered.map((biz) => (
                     <tr key={biz.id} className="border-b border-border last:border-0 hover:bg-muted/30">
-                      <td className="p-4 font-medium">{biz.name}</td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          {biz.logo_url ? (
+                            <img src={biz.logo_url} alt="" className="h-8 w-8 rounded-lg object-cover" />
+                          ) : (
+                            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
+                              {biz.name.slice(0, 2).toUpperCase()}
+                            </div>
+                          )}
+                          <span className="font-medium">{biz.name}</span>
+                        </div>
+                      </td>
                       <td className="p-4 hidden sm:table-cell capitalize text-muted-foreground">{biz.industry}</td>
                       <td className="p-4 hidden md:table-cell text-muted-foreground">{biz.email ?? "—"}</td>
                       <td className="p-4 text-center">
                         <Select value={biz.subscription_plan} onValueChange={(v) => changePlan(biz.id, v)}>
-                          <SelectTrigger className="h-8 w-[130px] mx-auto text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
+                          <SelectTrigger className="h-8 w-[130px] mx-auto text-xs"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="trial">Trial</SelectItem>
                             <SelectItem value="starter">Starter</SelectItem>
@@ -340,12 +486,7 @@ export default function AdminBusinessesPage() {
                         {biz.trial_ends_at ? new Date(biz.trial_ends_at).toLocaleDateString() : "—"}
                       </td>
                       <td className="p-4 text-center">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleActive(biz)}
-                          className="text-xs"
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => toggleActive(biz)} className="text-xs">
                           {biz.is_active ? (
                             <><ToggleRight className="h-4 w-4 mr-1 text-success" /> Suspend</>
                           ) : (
