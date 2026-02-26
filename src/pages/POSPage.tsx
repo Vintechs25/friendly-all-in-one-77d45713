@@ -666,6 +666,7 @@ export default function POSPage() {
               }}
               cashTendered={cashTendered}
               onCashTenderedChange={setCashTendered}
+              businessId={profile?.business_id ?? null}
             />
 
             <Button className="w-full" disabled={cart.length === 0 || processing || !canUsePOS} onClick={completeSale}>

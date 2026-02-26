@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
-import { Clock, Play, Square, Loader2, DollarSign, AlertTriangle } from "lucide-react";
+import { Clock, Play, Square, Loader2, DollarSign, AlertTriangle, ArrowDownToLine } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -27,6 +27,13 @@ interface Shift {
   status: string;
 }
 
+interface SafeDrop {
+  id: string;
+  amount: number;
+  notes: string | null;
+  created_at: string;
+}
+
 export default function ShiftsPage() {
   const { user, profile } = useAuth();
   const [shifts, setShifts] = useState<Shift[]>([]);
@@ -34,9 +41,13 @@ export default function ShiftsPage() {
   const [openShift, setOpenShift] = useState<Shift | null>(null);
   const [showOpenDialog, setShowOpenDialog] = useState(false);
   const [showCloseDialog, setShowCloseDialog] = useState(false);
+  const [showSafeDropDialog, setShowSafeDropDialog] = useState(false);
   const [openingCash, setOpeningCash] = useState("0");
   const [closingCash, setClosingCash] = useState("0");
   const [closeNotes, setCloseNotes] = useState("");
+  const [safeDropAmount, setSafeDropAmount] = useState("");
+  const [safeDropNotes, setSafeDropNotes] = useState("");
+  const [safeDrops, setSafeDrops] = useState<SafeDrop[]>([]);
   const [saving, setSaving] = useState(false);
 
   const businessId = profile?.business_id;
@@ -53,9 +64,21 @@ export default function ShiftsPage() {
 
     const all = (data ?? []) as Shift[];
     setShifts(all);
-    // Find current user's open shift
     const myOpen = all.find(s => s.cashier_id === user?.id && s.status === "open");
     setOpenShift(myOpen ?? null);
+
+    // Load safe drops for open shift
+    if (myOpen) {
+      const { data: drops } = await supabase
+        .from("safe_drops")
+        .select("id, amount, notes, created_at")
+        .eq("shift_id", myOpen.id)
+        .order("created_at", { ascending: false });
+      setSafeDrops((drops ?? []) as SafeDrop[]);
+    } else {
+      setSafeDrops([]);
+    }
+
     setLoading(false);
   }, [businessId, user?.id]);
 
@@ -89,7 +112,6 @@ export default function ShiftsPage() {
     if (!openShift) return;
     setSaving(true);
     try {
-      // Calculate expected cash: opening + cash sales during shift
       const { data: sales } = await supabase
         .from("sales")
         .select("total, payment_method")
@@ -111,7 +133,8 @@ export default function ShiftsPage() {
       const totalSales = (totalSalesRes.data ?? []).reduce((s, r) => s + Number(r.total), 0);
       const totalTx = totalSalesRes.data?.length ?? 0;
       const closing = parseFloat(closingCash) || 0;
-      const expected = openShift.opening_cash + cashSales;
+      const totalSafeDrops = safeDrops.reduce((s, d) => s + d.amount, 0);
+      const expected = openShift.opening_cash + cashSales - totalSafeDrops;
       const variance = closing - expected;
 
       const { error } = await supabase.from("cashier_shifts").update({
@@ -134,10 +157,34 @@ export default function ShiftsPage() {
     } finally { setSaving(false); }
   };
 
+  const handleSafeDrop = async () => {
+    if (!openShift || !user || !businessId) return;
+    const amount = parseFloat(safeDropAmount);
+    if (!amount || amount <= 0) { toast.error("Enter a valid amount"); return; }
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("safe_drops").insert({
+        shift_id: openShift.id,
+        business_id: businessId,
+        amount,
+        notes: safeDropNotes || null,
+        dropped_by: user.id,
+      });
+      if (error) { toast.error(error.message); return; }
+      toast.success(`Safe drop of $${amount.toFixed(2)} recorded`);
+      setShowSafeDropDialog(false);
+      setSafeDropAmount("");
+      setSafeDropNotes("");
+      loadShifts();
+    } finally { setSaving(false); }
+  };
+
   const fmt = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
   const fmtTime = (iso: string) => new Date(iso).toLocaleString("en-US", {
     month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
   });
+
+  const totalSafeDrops = safeDrops.reduce((s, d) => s + d.amount, 0);
 
   return (
     <DashboardLayout>
@@ -145,26 +192,60 @@ export default function ShiftsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="font-display text-2xl font-bold">Cashier Shifts</h1>
-            <p className="text-muted-foreground text-sm mt-1">Manage shift open/close and cash reconciliation</p>
+            <p className="text-muted-foreground text-sm mt-1">Manage shift open/close, safe drops, and cash reconciliation</p>
           </div>
-          {openShift ? (
-            <Button variant="destructive" onClick={() => setShowCloseDialog(true)}>
-              <Square className="h-4 w-4 mr-2" /> Close Current Shift
-            </Button>
-          ) : (
-            <Button onClick={() => setShowOpenDialog(true)}>
-              <Play className="h-4 w-4 mr-2" /> Open Shift
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {openShift && (
+              <Button variant="outline" onClick={() => setShowSafeDropDialog(true)}>
+                <ArrowDownToLine className="h-4 w-4 mr-2" /> Safe Drop
+              </Button>
+            )}
+            {openShift ? (
+              <Button variant="destructive" onClick={() => setShowCloseDialog(true)}>
+                <Square className="h-4 w-4 mr-2" /> Close Shift
+              </Button>
+            ) : (
+              <Button onClick={() => setShowOpenDialog(true)}>
+                <Play className="h-4 w-4 mr-2" /> Open Shift
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Active shift banner */}
         {openShift && (
           <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
             <Clock className="h-5 w-5 text-primary shrink-0 animate-pulse" />
-            <div>
+            <div className="flex-1">
               <p className="text-sm font-medium">Shift active since {fmtTime(openShift.started_at)}</p>
-              <p className="text-xs text-muted-foreground">Opening cash: {fmt(openShift.opening_cash)}</p>
+              <p className="text-xs text-muted-foreground">
+                Opening cash: {fmt(openShift.opening_cash)}
+                {totalSafeDrops > 0 && ` · Safe drops: ${fmt(totalSafeDrops)}`}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Safe drops during active shift */}
+        {openShift && safeDrops.length > 0 && (
+          <div className="rounded-xl border border-border bg-card p-4 space-y-2">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <ArrowDownToLine className="h-4 w-4" /> Safe Drops This Shift
+            </h3>
+            <div className="space-y-1.5">
+              {safeDrops.map((drop) => (
+                <div key={drop.id} className="flex items-center justify-between text-sm rounded-lg bg-muted/50 px-3 py-2">
+                  <div>
+                    <span className="font-medium">{fmt(drop.amount)}</span>
+                    {drop.notes && <span className="text-muted-foreground ml-2 text-xs">— {drop.notes}</span>}
+                  </div>
+                  <span className="text-xs text-muted-foreground">{fmtTime(drop.created_at)}</span>
+                </div>
+              ))}
+              <div className="flex justify-between text-sm font-semibold pt-1 border-t border-border">
+                <span>Total Drops</span>
+                <span>{fmt(totalSafeDrops)}</span>
+              </div>
             </div>
           </div>
         )}
@@ -253,10 +334,17 @@ export default function ShiftsPage() {
         <DialogContent>
           <DialogHeader><DialogTitle>Close Current Shift</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="flex items-center gap-3 rounded-lg border border-warning/30 bg-warning/5 p-3">
-              <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
+            <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 p-3">
+              <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
               <p className="text-xs">Count all cash in your register including the opening amount</p>
             </div>
+            {totalSafeDrops > 0 && (
+              <div className="rounded-lg bg-muted/50 p-3 text-sm">
+                <p className="text-xs text-muted-foreground mb-1">Safe drops this shift:</p>
+                <p className="font-semibold">{fmt(totalSafeDrops)}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">Already accounted for in expected cash calculation</p>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Closing Cash Amount ($)</Label>
               <Input type="number" step="0.01" min="0" value={closingCash} onChange={e => setClosingCash(e.target.value)} />
@@ -271,6 +359,48 @@ export default function ShiftsPage() {
             <Button variant="destructive" onClick={handleCloseShift} disabled={saving}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Square className="h-4 w-4 mr-2" />}
               Close Shift
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Safe Drop Dialog */}
+      <Dialog open={showSafeDropDialog} onOpenChange={setShowSafeDropDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ArrowDownToLine className="h-5 w-5" /> Record Safe Drop
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-xs text-muted-foreground">
+              Record cash removed from the register and placed in the safe during this shift.
+            </p>
+            <div className="space-y-2">
+              <Label>Amount ($)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={safeDropAmount}
+                onChange={(e) => setSafeDropAmount(e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Notes (optional)</Label>
+              <Input
+                value={safeDropNotes}
+                onChange={(e) => setSafeDropNotes(e.target.value)}
+                placeholder="e.g. Midday cash removal"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSafeDropDialog(false)}>Cancel</Button>
+            <Button onClick={handleSafeDrop} disabled={saving}>
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ArrowDownToLine className="h-4 w-4 mr-2" />}
+              Record Drop
             </Button>
           </DialogFooter>
         </DialogContent>
