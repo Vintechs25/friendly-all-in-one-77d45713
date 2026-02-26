@@ -135,7 +135,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary" />
             </Button>
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-semibold">
-              JD
+              {initials}
             </div>
           </div>
         </header>
