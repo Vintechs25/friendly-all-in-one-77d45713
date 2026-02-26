@@ -34,7 +34,8 @@ type Product = Tables<"products">;
 
 export default function POSPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [mobileView, setMobileView] = useState<"products" | "cart">("products");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
