@@ -298,7 +298,7 @@ export default function PurchaseOrdersPage() {
             </div>
 
             <div className="text-right font-semibold">
-              Total: ${items.reduce((s, it) => s + it.quantity * it.unit_cost, 0).toFixed(2)}
+              Total: KSh {items.reduce((s, it) => s + it.quantity * it.unit_cost, 0).toFixed(2)}
             </div>
           </div>
           <DialogFooter>
