@@ -12,8 +12,10 @@ interface ProtectedRouteProps {
 export default function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
   const { session, loading, hasRole } = useAuth();
   const { isLoading: licenseLoading, needsLicense, canLogin } = useLicense();
+  const { isRouteAllowedByFeature, isLoading: featureLoading } = useFeatureToggles();
+  const location = useLocation();
 
-  if (loading || licenseLoading) {
+  if (loading || licenseLoading || featureLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
