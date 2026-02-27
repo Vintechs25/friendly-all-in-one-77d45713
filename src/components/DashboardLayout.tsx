@@ -5,6 +5,7 @@ import { useBranding } from "@/contexts/BrandingContext";
 import { useLicense, LicenseBanner } from "@/contexts/LicenseContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import type { Permission } from "@/hooks/usePermissions";
+import { useFeatureToggles } from "@/hooks/useFeatureToggles";
 import {
   LayoutDashboard,
   ShoppingCart,
