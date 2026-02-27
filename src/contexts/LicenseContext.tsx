@@ -75,8 +75,8 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
     const trialEnded = business?.trial_ends_at && new Date(business.trial_ends_at) <= new Date();
     const isTrialPlan = business?.subscription_plan === "trial";
 
-    // Look for an active license
-    const { data: license } = await supabase
+    // Look for an active license first
+    const { data: activeLicense } = await supabase
       .from("licenses")
       .select("license_key, status")
       .eq("business_id", businessId)
@@ -85,9 +85,44 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
       .limit(1)
       .maybeSingle();
 
-    if (!license) {
+    // Also check latest non-active status to catch suspended/terminated immediately
+    const { data: latestLicense } = await supabase
+      .from("licenses")
+      .select("status")
+      .eq("business_id", businessId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!activeLicense) {
+      if (latestLicense?.status === "suspended") {
+        setNeedsLicense(false);
+        setLicenseState("suspended");
+        setValidation({
+          state: "suspended",
+          message: "Your license is suspended. Contact support.",
+          salesBlocked: true,
+          loginBlocked: true,
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      if (latestLicense?.status === "terminated") {
+        setNeedsLicense(false);
+        setLicenseState("terminated");
+        setValidation({
+          state: "terminated",
+          message: "Your license is terminated. Contact support.",
+          salesBlocked: true,
+          loginBlocked: true,
+        });
+        setIsLoading(false);
+        return;
+      }
+
       if (trialEnded || (isTrialPlan && trialEnded)) {
-        // Trial ended and no license → block access
+        // Trial ended and no active license → block access
         setNeedsLicense(true);
         setLicenseState("expired");
         setValidation({
@@ -107,9 +142,9 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Has a license → validate it
+    // Has active license → validate it
     setNeedsLicense(false);
-    const result = await validateLicense(license.license_key, PROJECT_ID);
+    const result = await validateLicense(activeLicense.license_key, PROJECT_ID);
     handleStateChange(result);
   }, [user, profile?.business_id, handleStateChange, isSuperAdmin, refreshProfile]);
 
