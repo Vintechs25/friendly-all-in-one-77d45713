@@ -5,6 +5,7 @@ import { useBranding } from "@/contexts/BrandingContext";
 import { useLicense, LicenseBanner } from "@/contexts/LicenseContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import type { Permission } from "@/hooks/usePermissions";
+import { useFeatureToggles } from "@/hooks/useFeatureToggles";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -74,8 +75,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { can } = usePermissions();
   const { branding } = useBranding();
   const { licenseState } = useLicense();
+  const { isPermissionAllowedByFeature, isRouteAllowedByFeature } = useFeatureToggles();
 
-  const visibleNavItems = navItems.filter((item) => !item.permission || can(item.permission));
+  const visibleNavItems = navItems.filter((item) => {
+    // Check RBAC permission
+    if (item.permission && !can(item.permission)) return false;
+    // Check feature toggle by permission
+    if (item.permission && !isPermissionAllowedByFeature(item.permission)) return false;
+    // Check feature toggle by route
+    if (!isRouteAllowedByFeature(item.path)) return false;
+    return true;
+  });
 
   // Group items
   const groups = ["Main", "Sales", "Stock", "Admin"];
