@@ -27,7 +27,7 @@ const LicenseContext = createContext<LicenseContextType | undefined>(undefined);
 const PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID || "vzerzgmywwhvcgkezkhh";
 
 export function LicenseProvider({ children }: { children: React.ReactNode }) {
-  const { user, profile, roles, refreshProfile } = useAuth();
+  const { user, profile, roles, refreshProfile, signOut } = useAuth();
   const [licenseState, setLicenseState] = useState<LicenseState>("unregistered");
   const [validation, setValidation] = useState<LicenseValidation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
