@@ -195,7 +195,7 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
       const trialEnded = business?.trial_ends_at && new Date(business.trial_ends_at) <= new Date();
       const isTrialPlan = business?.subscription_plan === "trial";
 
-      const { data: license } = await supabase
+      const { data: activeLicense } = await supabase
         .from("licenses")
         .select("license_key, status")
         .eq("business_id", profile!.business_id!)
@@ -204,9 +204,43 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
         .limit(1)
         .maybeSingle();
 
+      const { data: latestLicense } = await supabase
+        .from("licenses")
+        .select("status")
+        .eq("business_id", profile!.business_id!)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
       if (!mounted) return;
 
-      if (!license) {
+      if (!activeLicense) {
+        if (latestLicense?.status === "suspended") {
+          setNeedsLicense(false);
+          setLicenseState("suspended");
+          setValidation({
+            state: "suspended",
+            message: "Your license is suspended. Contact support.",
+            salesBlocked: true,
+            loginBlocked: true,
+          });
+          setIsLoading(false);
+          return;
+        }
+
+        if (latestLicense?.status === "terminated") {
+          setNeedsLicense(false);
+          setLicenseState("terminated");
+          setValidation({
+            state: "terminated",
+            message: "Your license is terminated. Contact support.",
+            salesBlocked: true,
+            loginBlocked: true,
+          });
+          setIsLoading(false);
+          return;
+        }
+
         if (trialEnded || (isTrialPlan && trialEnded)) {
           setNeedsLicense(true);
           setLicenseState("expired");
@@ -219,6 +253,7 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
           setIsLoading(false);
           return;
         }
+
         // Active trial
         setNeedsLicense(false);
         setLicenseState("active");
@@ -227,9 +262,9 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Has license → start periodic validation
+      // Has active license → start periodic validation
       setNeedsLicense(false);
-      startPeriodicValidation(license.license_key, PROJECT_ID, (v) => {
+      startPeriodicValidation(activeLicense.license_key, PROJECT_ID, (v) => {
         if (mounted) handleStateChange(v);
       });
     }
