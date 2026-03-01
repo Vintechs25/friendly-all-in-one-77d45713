@@ -329,14 +329,10 @@ export default function AdminLicensesPage() {
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant={d.is_active ? "default" : "secondary"}>
-                        {d.is_active ? "Active" : "Inactive"}
-                      </Badge>
-                      {d.is_active && (
-                        <Button variant="outline" size="sm" onClick={() => deactivateDevice(d.id)}>
-                          Deactivate
-                        </Button>
-                      )}
+                      <Badge variant="default">Active</Badge>
+                      <Button variant="outline" size="sm" onClick={() => deactivateDevice(d.id)}>
+                        Remove
+                      </Button>
                     </div>
                   </div>
                 ))
