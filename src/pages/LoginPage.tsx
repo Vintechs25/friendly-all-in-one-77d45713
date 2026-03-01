@@ -37,7 +37,7 @@ export default function LoginPage() {
         toast.error(error.message);
       } else {
         toast.success("Welcome back!");
-        navigate("/dashboard");
+        // Redirect happens via useEffect once roles load
       }
     } finally {
       setLoading(false);
