@@ -6,7 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
-import { Search, Plus, AlertTriangle, Loader2, Package, Pencil, Trash2 } from "lucide-react";
+import { Search, Plus, AlertTriangle, Loader2, Package, Pencil, Trash2, Upload } from "lucide-react";
+import BulkImportDialog from "@/components/inventory/BulkImportDialog";
+import { autoFillProductFields } from "@/lib/product-auto-gen";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
