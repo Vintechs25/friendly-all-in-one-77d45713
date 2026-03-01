@@ -39,6 +39,7 @@ export default function POSLayout({
   soundEnabled,
   onToggleSound,
   lastBarcode,
+  deviceStatuses,
 }: POSLayoutProps) {
   const [time, setTime] = useState(new Date());
   const navigate = useNavigate();
