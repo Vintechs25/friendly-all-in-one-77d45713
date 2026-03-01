@@ -6,6 +6,7 @@ import {
   Banknote, CreditCard, Smartphone, Plus, Trash2, Calculator,
   Wallet, Gift, Search, Loader2,
 } from "lucide-react";
+import NumericKeypad from "./NumericKeypad";
 import { PaymentEntry, PaymentMethod } from "./types";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -205,23 +206,11 @@ export default function SplitPaymentPanel({
         </div>
 
         {selectedMethod === "cash" && (
-          <div className="space-y-1">
-            <Label className="text-xs">Cash Tendered</Label>
-            <Input
-              type="number"
-              value={cashTendered || ""}
-              onChange={(e) => onCashTenderedChange(parseFloat(e.target.value) || 0)}
-              placeholder={total.toFixed(2)}
-              className="h-8"
-              min="0"
-              step="0.01"
-            />
-            {cashTendered >= total && cashTendered > 0 && (
-              <p className="text-sm font-semibold text-green-600">
-                Change: KSh {(cashTendered - total).toFixed(2)}
-              </p>
-            )}
-          </div>
+          <NumericKeypad
+            value={cashTendered}
+            onChange={onCashTenderedChange}
+            total={total}
+          />
         )}
 
         {selectedMethod === "mobile_money" && payments[0]?.reference && (
@@ -337,22 +326,11 @@ export default function SplitPaymentPanel({
       </Button>
 
       {hasCash && (
-        <div className="space-y-1">
-          <Label className="text-xs">Cash Tendered</Label>
-          <Input
-            type="number"
-            value={cashTendered || ""}
-            onChange={(e) => onCashTenderedChange(parseFloat(e.target.value) || 0)}
-            className="h-7"
-            min="0"
-            step="0.01"
-          />
-          {changeAmount > 0 && (
-            <p className="text-xs font-semibold text-green-600">
-              Change: KSh {changeAmount.toFixed(2)}
-            </p>
-          )}
-        </div>
+        <NumericKeypad
+          value={cashTendered}
+          onChange={onCashTenderedChange}
+          total={cashEntry?.amount ?? total}
+        />
       )}
 
       {/* M-Pesa Dialog */}
