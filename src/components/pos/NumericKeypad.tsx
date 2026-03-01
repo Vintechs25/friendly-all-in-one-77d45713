@@ -71,9 +71,9 @@ export default function NumericKeypad({ value, onChange, total }: NumericKeypadP
         {(parseFloat(display) || 0) >= total && total > 0 && (
           <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t border-border">
             <span className="text-[10px] font-medium text-muted-foreground">Change</span>
-            <span className="text-sm font-bold text-green-600 dark:text-green-400 tabular-nums">
-              KSh {changeAmount.toFixed(2)}
-            </span>
+              <span className="text-sm font-bold text-success tabular-nums">
+                KSh {changeAmount.toFixed(2)}
+              </span>
           </div>
         )}
       </div>

@@ -189,18 +189,18 @@ export default function SplitPaymentPanel({
   if (!splitMode) {
     const selectedMethod = payments[0]?.method ?? "cash";
     return (
-      <div className="space-y-2">
+      <div className="space-y-2.5">
         <div className="grid grid-cols-5 gap-1.5">
           {allMethods.map((m) => (
             <Button
               key={m}
               variant={selectedMethod === m ? "default" : "outline"}
               size="sm"
-              className="flex-col h-auto py-2 gap-0.5 px-1"
+              className="flex-col h-auto py-2.5 gap-1 px-1 rounded-xl touch-manipulation active:scale-95 transition-all"
               onClick={() => selectMethod(m)}
             >
               {methodIcons[m]}
-              <span className="text-[9px] leading-tight">{methodLabels[m]}</span>
+              <span className="text-[9px] leading-tight font-semibold">{methodLabels[m]}</span>
             </Button>
           ))}
         </div>
@@ -219,8 +219,8 @@ export default function SplitPaymentPanel({
           </p>
         )}
 
-        <Button variant="ghost" size="sm" className="w-full h-7 text-xs gap-1" onClick={onToggleSplit}>
-          <Calculator className="h-3 w-3" /> Split Payment
+        <Button variant="ghost" size="sm" className="w-full h-8 text-xs gap-1.5 rounded-lg" onClick={onToggleSplit}>
+          <Calculator className="h-3.5 w-3.5" /> Split Payment
         </Button>
 
         {/* M-Pesa Dialog */}
@@ -311,7 +311,7 @@ export default function SplitPaymentPanel({
         <p className="text-xs text-destructive">Remaining: KSh {remaining.toFixed(2)}</p>
       )}
       {remaining <= 0 && allocated >= total && (
-        <p className="text-xs text-green-600">Fully allocated ✓</p>
+        <p className="text-xs text-success">Fully allocated ✓</p>
       )}
 
       <Button
@@ -380,9 +380,9 @@ function MpesaDialog({
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-3 py-2">
-          <div className="rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 p-3 text-center">
+          <div className="rounded-lg bg-success/10 border border-success/20 p-3 text-center">
             <p className="text-xs text-muted-foreground">Amount</p>
-            <p className="text-2xl font-bold text-green-700 dark:text-green-400">KSh {amount.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-success">KSh {amount.toFixed(2)}</p>
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Customer Phone Number</Label>
@@ -397,7 +397,7 @@ function MpesaDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={onSubmit} disabled={loading} className="bg-green-600 hover:bg-green-700">
+          <Button onClick={onSubmit} disabled={loading} className="bg-success hover:bg-success/90 text-success-foreground">
             {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Smartphone className="h-4 w-4 mr-2" />}
             Send STK Push
           </Button>
