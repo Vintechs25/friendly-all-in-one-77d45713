@@ -21,7 +21,7 @@ interface LicenseContextType {
 
 const LicenseContext = createContext<LicenseContextType | undefined>(undefined);
 
-const PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID || "vzerzgmywwhvcgkezkhh";
+
 
 export function LicenseProvider({ children }: { children: React.ReactNode }) {
   const { user, profile, roles, refreshProfile, signOut } = useAuth();
