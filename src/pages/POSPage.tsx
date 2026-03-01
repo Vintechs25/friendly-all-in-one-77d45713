@@ -87,6 +87,7 @@ export default function POSPage() {
   const { user, profile, hasRole } = useAuth();
   const { canUsePOS } = useLicense();
   const { isOnline, pendingCount, syncing, syncAll, refreshCount } = useOfflineSync();
+  const { deviceStatuses } = useHardwareConfig();
 
   const canOverridePrice = hasRole("business_owner") || hasRole("manager") || hasRole("super_admin");
 
