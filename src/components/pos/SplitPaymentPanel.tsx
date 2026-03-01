@@ -311,7 +311,7 @@ export default function SplitPaymentPanel({
         <p className="text-xs text-destructive">Remaining: KSh {remaining.toFixed(2)}</p>
       )}
       {remaining <= 0 && allocated >= total && (
-        <p className="text-xs text-green-600">Fully allocated ✓</p>
+        <p className="text-xs text-success">Fully allocated ✓</p>
       )}
 
       <Button
