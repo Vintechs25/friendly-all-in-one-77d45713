@@ -399,7 +399,7 @@ export default function POSPage() {
         </div>
 
         {/* ═══ RIGHT: Cart + Payment ═══ */}
-        <div className="w-full md:w-[360px] xl:w-[400px] flex flex-col bg-card shrink-0">
+        <div className="w-full md:w-[400px] xl:w-[440px] 2xl:w-[480px] flex flex-col bg-card shrink-0">
           {/* Cart header */}
           <div className="px-3 py-2.5 border-b border-border flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2">
