@@ -30,6 +30,7 @@ import AdminBusinessesPage from "./pages/admin/AdminBusinessesPage";
 import AdminPlansPage from "./pages/admin/AdminPlansPage";
 import AdminFeaturesPage from "./pages/admin/AdminFeaturesPage";
 import AdminLicensesPage from "./pages/admin/AdminLicensesPage";
+import HardwareSettingsPage from "./pages/HardwareSettingsPage";
 
 import NotFound from "./pages/NotFound";
 
