@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Minus, Plus, Trash2, Percent, DollarSign, Edit3 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { CartItem, getEffectivePrice, getItemTotal } from "./types";
+import { cn } from "@/lib/utils";
 
 interface CartItemRowProps {
   item: CartItem;
@@ -29,8 +30,8 @@ export default function CartItemRow({
   const lineTotal = getItemTotal(item);
 
   const commitQty = () => {
-    const parsed = parseInt(qtyInput);
-    if (!isNaN(parsed) && parsed >= 1) {
+    const parsed = parseFloat(qtyInput);
+    if (!isNaN(parsed) && parsed >= 0.001) {
       onUpdateQty(item.id, parsed);
     } else {
       setQtyInput(String(item.qty));
@@ -39,27 +40,31 @@ export default function CartItemRow({
   };
 
   return (
-    <div className="rounded-lg bg-muted/50 p-3 space-y-1.5">
+    <div className="rounded-lg border border-border bg-background p-2.5 space-y-1 touch-manipulation">
+      {/* Main row */}
       <div className="flex items-center gap-2">
+        {/* Product info */}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{item.name}</p>
-          <p className="text-xs text-muted-foreground">
-            KSh {effectivePrice.toFixed(2)} each
+          <p className="text-[13px] font-semibold truncate leading-tight">{item.name}</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            KSh {effectivePrice.toFixed(2)}
             {item.priceOverride !== null && (
-              <span className="text-yellow-600 ml-1">(overridden)</span>
+              <span className="text-warning ml-1 font-medium">(edited)</span>
             )}
           </p>
         </div>
-        <div className="flex items-center gap-1">
+
+        {/* Quantity controls */}
+        <div className="flex items-center gap-0.5 shrink-0">
           <button
-            onClick={() => onUpdateQty(item.id, Math.max(1, item.qty - 1))}
-            className="h-7 w-7 rounded-md border border-border flex items-center justify-center hover:bg-background"
+            onClick={() => onUpdateQty(item.id, Math.max(0.001, item.qty - 1))}
+            className="h-8 w-8 rounded-lg border border-border flex items-center justify-center hover:bg-muted active:scale-95 transition-all touch-manipulation"
           >
-            <Minus className="h-3 w-3" />
+            <Minus className="h-3.5 w-3.5" />
           </button>
           {editingQty ? (
             <Input
-              className="w-14 h-7 text-center text-sm p-0"
+              className="w-14 h-8 text-center text-sm font-bold p-0"
               value={qtyInput}
               onChange={(e) => setQtyInput(e.target.value)}
               onBlur={commitQty}
@@ -68,46 +73,49 @@ export default function CartItemRow({
             />
           ) : (
             <button
-              className="w-10 text-center text-sm font-semibold hover:bg-background rounded-md py-1"
+              className="w-12 h-8 text-center text-sm font-bold bg-muted rounded-lg hover:bg-muted/80 transition-colors touch-manipulation"
               onClick={() => {
                 setQtyInput(String(item.qty));
                 setEditingQty(true);
               }}
             >
-              {item.qty}
+              {item.qty % 1 !== 0 ? item.qty.toFixed(3) : item.qty}
             </button>
           )}
           <button
             onClick={() => onUpdateQty(item.id, item.qty + 1)}
-            className="h-7 w-7 rounded-md border border-border flex items-center justify-center hover:bg-background"
+            className="h-8 w-8 rounded-lg border border-border flex items-center justify-center hover:bg-muted active:scale-95 transition-all touch-manipulation"
           >
-            <Plus className="h-3 w-3" />
+            <Plus className="h-3.5 w-3.5" />
           </button>
         </div>
-        <span className="text-sm font-semibold w-20 text-right">
-          KSh {lineTotal.toFixed(2)}
+
+        {/* Line total */}
+        <span className="text-sm font-bold w-[72px] text-right tabular-nums">
+          {lineTotal.toFixed(2)}
         </span>
+
+        {/* Delete */}
         <button
           onClick={() => onRemove(item.id)}
-          className="text-muted-foreground hover:text-destructive"
+          className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors touch-manipulation"
         >
           <Trash2 className="h-4 w-4" />
         </button>
       </div>
 
-      {/* Discount & price override controls */}
-      <div className="flex gap-1.5">
+      {/* Action row */}
+      <div className="flex items-center gap-1">
         <ItemDiscountPopover item={item} onApply={onUpdateDiscount} />
         {canOverridePrice && (
           <PriceOverridePopover item={item} onApply={onPriceOverride} />
         )}
+        {item.itemDiscount > 0 && (
+          <span className="text-[10px] text-success font-medium ml-auto">
+            -{item.itemDiscountType === "percent" ? `${item.itemDiscount}%` : `KSh ${item.itemDiscount.toFixed(0)}`}
+          </span>
+        )}
       </div>
-
-      {item.itemDiscount > 0 && (
-        <p className="text-xs text-green-600">
-          Discount: {item.itemDiscountType === "percent" ? `${item.itemDiscount}%` : `KSh ${item.itemDiscount.toFixed(2)}`}
-        </p>
-      )}
     </div>
   );
 }
@@ -126,59 +134,31 @@ function ItemDiscountPopover({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] gap-1">
+        <button className={cn(
+          "flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-colors touch-manipulation",
+          item.itemDiscount > 0
+            ? "bg-success/10 text-success"
+            : "text-muted-foreground hover:text-foreground hover:bg-muted"
+        )}>
           <Percent className="h-3 w-3" /> Discount
-        </Button>
+        </button>
       </PopoverTrigger>
       <PopoverContent className="w-56 p-3 space-y-2" side="left">
-        <Label className="text-xs">Item Discount</Label>
+        <Label className="text-xs font-semibold">Item Discount</Label>
         <div className="flex gap-1">
-          <Button
-            variant={type === "fixed" ? "default" : "outline"}
-            size="sm"
-            className="h-7 text-xs flex-1"
-            onClick={() => setType("fixed")}
-          >
+          <Button variant={type === "fixed" ? "default" : "outline"} size="sm" className="h-8 text-xs flex-1" onClick={() => setType("fixed")}>
             <DollarSign className="h-3 w-3 mr-1" /> Fixed
           </Button>
-          <Button
-            variant={type === "percent" ? "default" : "outline"}
-            size="sm"
-            className="h-7 text-xs flex-1"
-            onClick={() => setType("percent")}
-          >
+          <Button variant={type === "percent" ? "default" : "outline"} size="sm" className="h-8 text-xs flex-1" onClick={() => setType("percent")}>
             <Percent className="h-3 w-3 mr-1" /> %
           </Button>
         </div>
-        <Input
-          type="number"
-          value={discount}
-          onChange={(e) => setDiscount(e.target.value)}
-          placeholder="0"
-          className="h-8"
-          min="0"
-        />
+        <Input type="number" value={discount} onChange={(e) => setDiscount(e.target.value)} placeholder="0" className="h-9" min="0" />
         <div className="flex gap-1">
-          <Button
-            size="sm"
-            className="flex-1 h-7 text-xs"
-            onClick={() => {
-              onApply(item.id, parseFloat(discount) || 0, type);
-              setOpen(false);
-            }}
-          >
+          <Button size="sm" className="flex-1 h-8 text-xs" onClick={() => { onApply(item.id, parseFloat(discount) || 0, type); setOpen(false); }}>
             Apply
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs"
-            onClick={() => {
-              onApply(item.id, 0, "fixed");
-              setDiscount("");
-              setOpen(false);
-            }}
-          >
+          <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => { onApply(item.id, 0, "fixed"); setDiscount(""); setOpen(false); }}>
             Clear
           </Button>
         </div>
@@ -200,28 +180,19 @@ function PriceOverridePopover({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] gap-1">
+        <button className={cn(
+          "flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-colors touch-manipulation",
+          item.priceOverride !== null
+            ? "bg-warning/10 text-warning"
+            : "text-muted-foreground hover:text-foreground hover:bg-muted"
+        )}>
           <Edit3 className="h-3 w-3" /> Price
-        </Button>
+        </button>
       </PopoverTrigger>
       <PopoverContent className="w-48 p-3 space-y-2" side="left">
-        <Label className="text-xs">Override Price</Label>
-        <Input
-          type="number"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-          className="h-8"
-          min="0"
-          step="0.01"
-        />
-        <Button
-          size="sm"
-          className="w-full h-7 text-xs"
-          onClick={() => {
-            onApply(item.id, parseFloat(price) || item.price);
-            setOpen(false);
-          }}
-        >
+        <Label className="text-xs font-semibold">Override Price</Label>
+        <Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} className="h-9" min="0" step="0.01" />
+        <Button size="sm" className="w-full h-8 text-xs" onClick={() => { onApply(item.id, parseFloat(price) || item.price); setOpen(false); }}>
           Set Price
         </Button>
       </PopoverContent>

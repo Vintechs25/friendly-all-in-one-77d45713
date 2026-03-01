@@ -1,4 +1,5 @@
-import { Package } from "lucide-react";
+import { Package, ShoppingCart } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Product {
   id: string;
@@ -9,61 +10,82 @@ interface Product {
   image_url: string | null;
   category_id: string | null;
   stock_quantity: number;
+  [key: string]: any;
 }
 
 interface ProductGridProps {
   products: Product[];
-  onAddToCart: (product: Product) => void;
+  onAddToCart: (product: any) => void;
 }
 
 export default function ProductGrid({ products, onAddToCart }: ProductGridProps) {
   if (products.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-        <Package className="h-10 w-10 mb-3 opacity-20" />
-        <p className="text-sm font-medium">No products found</p>
-        <p className="text-xs mt-1">Try a different category or search</p>
+      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+        <Package className="h-12 w-12 mb-4 opacity-15" />
+        <p className="text-sm font-semibold">No products found</p>
+        <p className="text-xs mt-1 text-muted-foreground/70">Try a different category or search</p>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2">
-      {products.map((product) => (
-        <button
-          key={product.id}
-          onClick={() => onAddToCart(product)}
-          className="group flex flex-col rounded-lg border border-border bg-card p-3 text-left hover:border-primary/40 hover:shadow-sm transition-all active:scale-[0.97]"
-        >
-          {product.image_url ? (
-            <div className="w-full aspect-square rounded-md bg-muted mb-2 overflow-hidden">
-              <img
-                src={product.image_url}
-                alt={product.name}
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
-            </div>
-          ) : (
-            <div className="w-full aspect-square rounded-md bg-muted/50 mb-2 flex items-center justify-center">
-              <span className="text-lg font-bold text-muted-foreground/30">
-                {product.name.slice(0, 2).toUpperCase()}
-              </span>
-            </div>
-          )}
-          <p className="text-xs font-medium leading-tight line-clamp-2 min-h-[2rem]">
-            {product.name}
-          </p>
-          <div className="flex items-center justify-between mt-1.5">
-            <span className="text-xs font-bold text-primary">
-              KSh {product.price.toFixed(0)}
-            </span>
-            {product.stock_quantity <= 0 && (
-              <span className="text-[9px] font-medium text-destructive">Out</span>
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2.5">
+      {products.map((product) => {
+        const outOfStock = product.stock_quantity <= 0;
+        return (
+          <button
+            key={product.id}
+            onClick={() => onAddToCart(product)}
+            disabled={outOfStock}
+            className={cn(
+              "group relative flex flex-col rounded-xl border-2 p-2.5 text-left transition-all touch-manipulation select-none",
+              outOfStock
+                ? "border-border/50 bg-muted/30 opacity-50 cursor-not-allowed"
+                : "border-border bg-card hover:border-primary/50 hover:shadow-md active:scale-[0.96] active:shadow-none"
             )}
-          </div>
-        </button>
-      ))}
+          >
+            {/* Image / Placeholder */}
+            {product.image_url ? (
+              <div className="w-full aspect-[4/3] rounded-lg bg-muted overflow-hidden mb-2">
+                <img
+                  src={product.image_url}
+                  alt={product.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                  loading="lazy"
+                />
+              </div>
+            ) : (
+              <div className="w-full aspect-[4/3] rounded-lg bg-gradient-to-br from-primary/5 to-primary/10 mb-2 flex items-center justify-center">
+                <span className="text-xl font-black text-primary/20">
+                  {product.name.slice(0, 2).toUpperCase()}
+                </span>
+              </div>
+            )}
+
+            {/* Name */}
+            <p className="text-[13px] font-semibold leading-tight line-clamp-2 min-h-[2.25rem] text-foreground">
+              {product.name}
+            </p>
+
+            {/* Price row */}
+            <div className="flex items-center justify-between mt-auto pt-1.5">
+              <span className="text-sm font-bold text-primary">
+                KSh {product.price.toLocaleString("en-KE", { minimumFractionDigits: 0 })}
+              </span>
+              {outOfStock ? (
+                <span className="text-[10px] font-semibold text-destructive bg-destructive/10 px-1.5 py-0.5 rounded">
+                  OUT
+                </span>
+              ) : (
+                <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <ShoppingCart className="h-3 w-3 text-primary" />
+                </div>
+              )}
+            </div>
+          </button>
+        );
+      })}
     </div>
   );
 }
