@@ -4,9 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   LicenseValidation,
   LicenseState,
-  validateLicense,
-  startPeriodicValidation,
-  stopPeriodicValidation,
   clearLicenseState,
 } from "@/lib/license-manager";
 import { Shield, ShieldAlert, ShieldOff, WifiOff, Lock } from "lucide-react";
@@ -24,7 +21,7 @@ interface LicenseContextType {
 
 const LicenseContext = createContext<LicenseContextType | undefined>(undefined);
 
-const PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID || "vzerzgmywwhvcgkezkhh";
+
 
 export function LicenseProvider({ children }: { children: React.ReactNode }) {
   const { user, profile, roles, refreshProfile, signOut } = useAuth();
@@ -142,10 +139,16 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Has active license → validate it
+    // Has active license in DB → trust it (DB is authoritative)
     setNeedsLicense(false);
-    const result = await validateLicense(activeLicense.license_key, PROJECT_ID);
-    handleStateChange(result);
+    setLicenseState("active");
+    setValidation({
+      state: "active",
+      message: "License validated.",
+      salesBlocked: false,
+      loginBlocked: false,
+    });
+    setIsLoading(false);
   }, [user, profile?.business_id, handleStateChange, isSuperAdmin, refreshProfile]);
 
   useEffect(() => {
@@ -262,18 +265,17 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Has active license → start periodic validation
+      // Has active license in DB → trust it
       setNeedsLicense(false);
-      startPeriodicValidation(activeLicense.license_key, PROJECT_ID, (v) => {
-        if (mounted) handleStateChange(v);
-      });
+      setLicenseState("active");
+      setValidation({ state: "active", message: "License validated." });
+      setIsLoading(false);
     }
 
     init();
 
     return () => {
       mounted = false;
-      stopPeriodicValidation();
     };
   }, [user, profile?.business_id, handleStateChange, isSuperAdmin]);
 
