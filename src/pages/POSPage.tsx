@@ -41,7 +41,7 @@ import {
   CartItem, PaymentEntry, PaymentMethod, HeldSale,
   createCartItem, getItemTotal, getItemTax,
 } from "@/components/pos/types";
-
+import { useHardwareConfig } from "@/hooks/useHardwareConfig";
 type Product = Tables<"products">;
 
 interface SelectedCustomer {
