@@ -47,7 +47,7 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
     const { data: freshProfile } = await supabase
       .from("profiles")
       .select("business_id")
-      .eq("id", user!.id)
+      .eq("user_id", user!.id)
       .single();
 
     const businessId = freshProfile?.business_id;
