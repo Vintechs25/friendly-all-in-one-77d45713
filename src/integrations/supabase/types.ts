@@ -384,6 +384,41 @@ export type Database = {
           },
         ]
       }
+      device_registrations: {
+        Row: {
+          device_fingerprint: string
+          device_name: string | null
+          id: string
+          last_seen_at: string | null
+          license_id: string
+          registered_at: string
+        }
+        Insert: {
+          device_fingerprint: string
+          device_name?: string | null
+          id?: string
+          last_seen_at?: string | null
+          license_id: string
+          registered_at?: string
+        }
+        Update: {
+          device_fingerprint?: string
+          device_name?: string | null
+          id?: string
+          last_seen_at?: string | null
+          license_id?: string
+          registered_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "device_registrations_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feature_toggles: {
         Row: {
           business_id: string
@@ -1562,6 +1597,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      subscription_plans: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          max_branches: number
+          max_products: number
+          max_users: number
+          name: string
+          plan_type: string
+          price_monthly: number
+          price_yearly: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_branches?: number
+          max_products?: number
+          max_users?: number
+          name: string
+          plan_type?: string
+          price_monthly?: number
+          price_yearly?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_branches?: number
+          max_products?: number
+          max_users?: number
+          name?: string
+          plan_type?: string
+          price_monthly?: number
+          price_yearly?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       suppliers: {
         Row: {
