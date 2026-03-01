@@ -64,6 +64,9 @@ export interface ReceiptData {
   voidReason?: string;
   // Rounding
   roundingAdjustment?: number;
+  // Customer
+  customerName?: string;
+  loyaltyPointsEarned?: number;
   // Offline
   isPendingSync?: boolean;
 }
