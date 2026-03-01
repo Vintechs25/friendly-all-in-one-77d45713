@@ -10,11 +10,12 @@ interface Product {
   image_url: string | null;
   category_id: string | null;
   stock_quantity: number;
+  [key: string]: any;
 }
 
 interface ProductGridProps {
   products: Product[];
-  onAddToCart: (product: Product) => void;
+  onAddToCart: (product: any) => void;
 }
 
 export default function ProductGrid({ products, onAddToCart }: ProductGridProps) {
