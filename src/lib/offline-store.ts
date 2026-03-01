@@ -85,7 +85,7 @@ export async function getPendingSales(): Promise<OfflineSale[]> {
   return new Promise((resolve, reject) => {
     const tx = db.transaction("pending_sales", "readonly");
     const index = tx.objectStore("pending_sales").index("synced");
-    const request = index.getAll(false);
+    const request = index.getAll(IDBKeyRange.only(0));
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });
