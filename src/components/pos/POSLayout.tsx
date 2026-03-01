@@ -23,6 +23,7 @@ interface POSLayoutProps {
   soundEnabled: boolean;
   onToggleSound: () => void;
   lastBarcode?: string;
+  deviceStatuses?: DeviceStatuses;
 }
 
 export default function POSLayout({
