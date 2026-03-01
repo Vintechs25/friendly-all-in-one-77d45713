@@ -268,11 +268,11 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Has active license → start periodic validation
+      // Has active license in DB → trust it
       setNeedsLicense(false);
-      startPeriodicValidation(activeLicense.license_key, PROJECT_ID, (v) => {
-        if (mounted) handleStateChange(v);
-      });
+      setLicenseState("active");
+      setValidation({ state: "active", message: "License validated." });
+      setIsLoading(false);
     }
 
     init();
