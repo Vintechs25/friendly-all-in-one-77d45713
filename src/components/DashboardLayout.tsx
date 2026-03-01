@@ -74,11 +74,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, roles } = useAuth();
   const { can } = usePermissions();
   const { branding } = useBranding();
   const { licenseState } = useLicense();
   const { isPermissionAllowedByFeature, isRouteAllowedByFeature } = useFeatureToggles();
+  const posOnly = isPosOnlyUser(roles);
 
   const visibleNavItems = navItems.filter((item) => {
     // Check RBAC permission
