@@ -65,6 +65,7 @@ const navItems: NavItem[] = [
   { icon: Users, label: "Team", path: "/dashboard/team", permission: "manage_team", group: "Admin" },
   { icon: FileText, label: "Audit Logs", path: "/dashboard/audit-logs", permission: "view_audit_logs", group: "Admin" },
   { icon: Settings, label: "Settings", path: "/dashboard/settings", permission: "manage_settings", group: "Admin" },
+  { icon: Monitor, label: "Hardware", path: "/dashboard/hardware", permission: "manage_settings", group: "Admin" },
 ];
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
