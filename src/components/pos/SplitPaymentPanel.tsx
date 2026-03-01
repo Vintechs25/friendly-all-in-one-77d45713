@@ -189,18 +189,18 @@ export default function SplitPaymentPanel({
   if (!splitMode) {
     const selectedMethod = payments[0]?.method ?? "cash";
     return (
-      <div className="space-y-2">
+      <div className="space-y-2.5">
         <div className="grid grid-cols-5 gap-1.5">
           {allMethods.map((m) => (
             <Button
               key={m}
               variant={selectedMethod === m ? "default" : "outline"}
               size="sm"
-              className="flex-col h-auto py-2 gap-0.5 px-1"
+              className="flex-col h-auto py-2.5 gap-1 px-1 rounded-xl touch-manipulation active:scale-95 transition-all"
               onClick={() => selectMethod(m)}
             >
               {methodIcons[m]}
-              <span className="text-[9px] leading-tight">{methodLabels[m]}</span>
+              <span className="text-[9px] leading-tight font-semibold">{methodLabels[m]}</span>
             </Button>
           ))}
         </div>
@@ -219,8 +219,8 @@ export default function SplitPaymentPanel({
           </p>
         )}
 
-        <Button variant="ghost" size="sm" className="w-full h-7 text-xs gap-1" onClick={onToggleSplit}>
-          <Calculator className="h-3 w-3" /> Split Payment
+        <Button variant="ghost" size="sm" className="w-full h-8 text-xs gap-1.5 rounded-lg" onClick={onToggleSplit}>
+          <Calculator className="h-3.5 w-3.5" /> Split Payment
         </Button>
 
         {/* M-Pesa Dialog */}
