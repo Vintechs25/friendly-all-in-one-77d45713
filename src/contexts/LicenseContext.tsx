@@ -6,7 +6,7 @@ import {
   LicenseState,
   clearLicenseState,
 } from "@/lib/license-manager";
-import { Shield, ShieldAlert, ShieldOff, WifiOff, Lock } from "lucide-react";
+
 
 interface LicenseContextType {
   licenseState: LicenseState;
