@@ -1809,6 +1809,75 @@ export type Database = {
           },
         ]
       }
+      terminal_hardware_configs: {
+        Row: {
+          branch_id: string | null
+          business_id: string
+          created_at: string
+          drawer_enabled: boolean
+          drawer_status: string
+          id: string
+          printer_connection_type: string
+          printer_enabled: boolean
+          printer_status: string
+          scale_enabled: boolean
+          scale_status: string
+          scanner_enabled: boolean
+          scanner_status: string
+          terminal_name: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id?: string | null
+          business_id: string
+          created_at?: string
+          drawer_enabled?: boolean
+          drawer_status?: string
+          id?: string
+          printer_connection_type?: string
+          printer_enabled?: boolean
+          printer_status?: string
+          scale_enabled?: boolean
+          scale_status?: string
+          scanner_enabled?: boolean
+          scanner_status?: string
+          terminal_name?: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string | null
+          business_id?: string
+          created_at?: string
+          drawer_enabled?: boolean
+          drawer_status?: string
+          id?: string
+          printer_connection_type?: string
+          printer_enabled?: boolean
+          printer_status?: string
+          scale_enabled?: boolean
+          scale_status?: string
+          scanner_enabled?: boolean
+          scanner_status?: string
+          terminal_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "terminal_hardware_configs_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "terminal_hardware_configs_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_permission_overrides: {
         Row: {
           business_id: string

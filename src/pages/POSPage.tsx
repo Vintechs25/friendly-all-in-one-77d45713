@@ -41,7 +41,7 @@ import {
   CartItem, PaymentEntry, PaymentMethod, HeldSale,
   createCartItem, getItemTotal, getItemTax,
 } from "@/components/pos/types";
-
+import { useHardwareConfig } from "@/hooks/useHardwareConfig";
 type Product = Tables<"products">;
 
 interface SelectedCustomer {
@@ -87,6 +87,7 @@ export default function POSPage() {
   const { user, profile, hasRole } = useAuth();
   const { canUsePOS } = useLicense();
   const { isOnline, pendingCount, syncing, syncAll, refreshCount } = useOfflineSync();
+  const { deviceStatuses } = useHardwareConfig();
 
   const canOverridePrice = hasRole("business_owner") || hasRole("manager") || hasRole("super_admin");
 
@@ -313,6 +314,7 @@ export default function POSPage() {
       soundEnabled={soundEnabled}
       onToggleSound={() => setSoundEnabled((p) => !p)}
       lastBarcode={scanner.lastScan?.sanitized}
+      deviceStatuses={{ ...deviceStatuses, internet: isOnline ? "online" : "offline" }}
     >
       <LicenseBanner />
       <ReceiptPreviewDialog open={showReceipt} onOpenChange={setShowReceipt} data={receiptData} />

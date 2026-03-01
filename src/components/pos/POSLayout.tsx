@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ScanMode } from "@/hooks/use-scanner";
+import DeviceStatusIndicators, { type DeviceStatuses } from "@/components/hardware/DeviceStatusIndicators";
 
 interface POSLayoutProps {
   children: React.ReactNode;
@@ -22,6 +23,7 @@ interface POSLayoutProps {
   soundEnabled: boolean;
   onToggleSound: () => void;
   lastBarcode?: string;
+  deviceStatuses?: DeviceStatuses;
 }
 
 export default function POSLayout({
@@ -37,6 +39,7 @@ export default function POSLayout({
   soundEnabled,
   onToggleSound,
   lastBarcode,
+  deviceStatuses,
 }: POSLayoutProps) {
   const [time, setTime] = useState(new Date());
   const navigate = useNavigate();
@@ -118,8 +121,13 @@ export default function POSLayout({
           </button>
         </div>
 
-        {/* Right: Status + Cashier + Clock */}
+        {/* Right: Device Status + Connection + Cashier + Clock */}
         <div className="flex items-center gap-3">
+          {/* Device status indicators */}
+          {deviceStatuses && (
+            <DeviceStatusIndicators statuses={deviceStatuses} compact />
+          )}
+
           {/* Connection status */}
           <div className="flex items-center gap-1.5">
             {isOnline ? (
