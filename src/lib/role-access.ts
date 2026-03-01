@@ -63,7 +63,7 @@ const ROLE_ROUTES: Record<string, string[] | "all"> = {
   business_owner: "all",  // full access
   super_admin: "all",
   platform_admin: "all",
-} as Record<string, string[] | "all">;
+};
 
 /**
  * Post-login redirect target per role (first match wins).
