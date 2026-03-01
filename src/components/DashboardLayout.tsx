@@ -6,6 +6,7 @@ import { useLicense, LicenseBanner } from "@/contexts/LicenseContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import type { Permission } from "@/hooks/usePermissions";
 import { useFeatureToggles } from "@/hooks/useFeatureToggles";
+import { filterNavItemsByRole, isPosOnlyUser } from "@/lib/role-access";
 import {
   LayoutDashboard,
   ShoppingCart,
