@@ -442,6 +442,7 @@ export type Database = {
           device_fingerprint: string
           device_name: string | null
           id: string
+          is_active: boolean
           last_seen_at: string | null
           license_id: string
           registered_at: string
@@ -450,6 +451,7 @@ export type Database = {
           device_fingerprint: string
           device_name?: string | null
           id?: string
+          is_active?: boolean
           last_seen_at?: string | null
           license_id: string
           registered_at?: string
@@ -458,6 +460,7 @@ export type Database = {
           device_fingerprint?: string
           device_name?: string | null
           id?: string
+          is_active?: boolean
           last_seen_at?: string | null
           license_id?: string
           registered_at?: string
@@ -744,30 +747,42 @@ export type Database = {
       }
       licenses: {
         Row: {
+          allowed_device_count: number
           business_id: string
           created_at: string
           expires_at: string | null
+          grace_period_hours: number
           id: string
+          last_validated_at: string | null
           license_key: string
           status: string
+          subscription_plan: string
           updated_at: string
         }
         Insert: {
+          allowed_device_count?: number
           business_id: string
           created_at?: string
           expires_at?: string | null
+          grace_period_hours?: number
           id?: string
+          last_validated_at?: string | null
           license_key: string
           status?: string
+          subscription_plan?: string
           updated_at?: string
         }
         Update: {
+          allowed_device_count?: number
           business_id?: string
           created_at?: string
           expires_at?: string | null
+          grace_period_hours?: number
           id?: string
+          last_validated_at?: string | null
           license_key?: string
           status?: string
+          subscription_plan?: string
           updated_at?: string
         }
         Relationships: [
