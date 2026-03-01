@@ -399,27 +399,27 @@ export default function POSPage() {
         </div>
 
         {/* ═══ RIGHT: Cart + Payment ═══ */}
-        <div className="w-[360px] xl:w-[400px] flex flex-col bg-card shrink-0">
+        <div className="w-full md:w-[360px] xl:w-[400px] flex flex-col bg-card shrink-0 max-h-[50vh] md:max-h-full">
           {/* Cart header */}
-          <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+          <div className="px-3 py-2.5 border-b border-border flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2">
               <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
                 <ShoppingBag className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <h2 className="font-display font-bold text-sm">Cart</h2>
-                <p className="text-[10px] text-muted-foreground">
+                <h2 className="font-bold text-sm leading-tight">Cart</h2>
+                <p className="text-[10px] text-muted-foreground leading-tight">
                   {cart.length} item{cart.length !== 1 ? "s" : ""} · {totalQty % 1 !== 0 ? totalQty.toFixed(3) : totalQty} units
                 </p>
               </div>
             </div>
-            <div className="flex gap-1">
+            <div className="flex gap-1.5">
               {cart.length > 0 && (
                 <>
-                  <Button variant="outline" size="sm" className="h-8 text-xs gap-1 touch-manipulation rounded-lg" onClick={holdTransaction}>
+                  <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 touch-manipulation rounded-lg" onClick={holdTransaction}>
                     <PauseCircle className="h-3.5 w-3.5" /> Hold
                   </Button>
-                  <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 text-destructive touch-manipulation rounded-lg" onClick={voidCurrentSale}>
+                  <Button variant="ghost" size="sm" className="h-8 text-xs gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 touch-manipulation rounded-lg" onClick={voidCurrentSale}>
                     <XCircle className="h-3.5 w-3.5" /> Void
                   </Button>
                 </>
