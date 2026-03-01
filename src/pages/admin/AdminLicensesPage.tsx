@@ -38,7 +38,6 @@ interface Device {
   id: string;
   device_fingerprint: string;
   device_name: string | null;
-  is_active: boolean;
   last_seen_at: string;
   registered_at: string;
 }
