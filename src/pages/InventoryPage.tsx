@@ -469,6 +469,14 @@ export default function InventoryPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BulkImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        businessId={businessId ?? ""}
+        branchId={branchId}
+        onImported={loadData}
+      />
     </DashboardLayout>
   );
 }
