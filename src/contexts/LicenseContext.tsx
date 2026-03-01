@@ -276,7 +276,6 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       mounted = false;
-      stopPeriodicValidation();
     };
   }, [user, profile?.business_id, handleStateChange, isSuperAdmin]);
 
