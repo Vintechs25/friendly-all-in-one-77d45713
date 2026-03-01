@@ -107,6 +107,42 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     navigate("/");
   };
 
+  // POS-only users get a minimal layout without sidebar
+  if (posOnly) {
+    return (
+      <div className="flex flex-col h-screen overflow-hidden bg-background">
+        <header className="flex h-12 items-center justify-between border-b border-border px-4 bg-card shrink-0">
+          <div className="flex items-center gap-2">
+            {branding.logoUrl ? (
+              <img src={branding.logoUrl} alt={branding.businessName} className="h-7 w-7 rounded-lg object-cover" />
+            ) : (
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary">
+                <Store className="h-3.5 w-3.5 text-primary-foreground" />
+              </div>
+            )}
+            <span className="font-display text-sm font-bold">{branding.businessName}</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-semibold">
+              {initials}
+            </div>
+            <button
+              onClick={handleSignOut}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              <span>Sign Out</span>
+            </button>
+          </div>
+        </header>
+        <LicenseBanner />
+        <main className="flex-1 overflow-y-auto">
+          {children}
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Mobile overlay */}
