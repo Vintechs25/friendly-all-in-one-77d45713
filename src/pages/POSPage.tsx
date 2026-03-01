@@ -388,13 +388,27 @@ export default function POSPage() {
                 <Loader2 className="h-10 w-10 animate-spin text-muted-foreground/50" />
               </div>
             ) : viewMode === "grid" ? (
-              <ProductGrid products={filtered} onAddToCart={(p) => { addToCart(p); toast.success(`${p.name} added`); }} />
+              <>
+                <ProductGrid products={filtered} onAddToCart={(p) => { addToCart(p); toast.success(`${p.name} added`); }} />
+                {filtered.length === 0 && searchTerm && (
+                  <div className="text-center mt-2">
+                    <Button variant="outline" size="sm" onClick={() => { setQuickProductInitial(searchTerm); setQuickProductOpen(true); }}>
+                      <Plus className="h-3.5 w-3.5 mr-1.5" /> Create "{searchTerm}"
+                    </Button>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="space-y-1">
                 {filtered.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
                     <Package className="h-12 w-12 mb-4 opacity-15" />
                     <p className="text-sm font-semibold">No products found</p>
+                    {searchTerm && (
+                      <Button variant="outline" size="sm" className="mt-3" onClick={() => { setQuickProductInitial(searchTerm); setQuickProductOpen(true); }}>
+                        <Plus className="h-3.5 w-3.5 mr-1.5" /> Create "{searchTerm}"
+                      </Button>
+                    )}
                   </div>
                 ) : filtered.map((product) => (
                   <button
