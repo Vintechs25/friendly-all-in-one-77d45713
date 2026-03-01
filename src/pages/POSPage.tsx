@@ -526,7 +526,7 @@ export default function POSPage() {
 
             {/* Complete button */}
             <Button
-              className="w-full h-14 text-base font-bold rounded-xl touch-manipulation shadow-lg shadow-primary/20"
+              className="w-full h-12 md:h-14 text-sm md:text-base font-bold rounded-xl touch-manipulation shadow-lg shadow-primary/25 active:scale-[0.98] transition-transform"
               disabled={cart.length === 0 || processing || !canUsePOS}
               onClick={completeSale}
             >
