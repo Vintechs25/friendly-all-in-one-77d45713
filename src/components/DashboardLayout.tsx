@@ -6,6 +6,7 @@ import { useLicense, LicenseBanner } from "@/contexts/LicenseContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import type { Permission } from "@/hooks/usePermissions";
 import { useFeatureToggles } from "@/hooks/useFeatureToggles";
+import { filterNavItemsByRole, isPosOnlyUser } from "@/lib/role-access";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -73,21 +74,22 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, roles } = useAuth();
   const { can } = usePermissions();
   const { branding } = useBranding();
   const { licenseState } = useLicense();
   const { isPermissionAllowedByFeature, isRouteAllowedByFeature } = useFeatureToggles();
+  const posOnly = isPosOnlyUser(roles);
 
-  const visibleNavItems = navItems.filter((item) => {
-    // Check RBAC permission
+  const permFiltered = navItems.filter((item) => {
     if (item.permission && !can(item.permission)) return false;
-    // Check feature toggle by permission
     if (item.permission && !isPermissionAllowedByFeature(item.permission)) return false;
-    // Check feature toggle by route
     if (!isRouteAllowedByFeature(item.path)) return false;
     return true;
   });
+
+  // Apply role-based filtering on top of permission filtering
+  const visibleNavItems = filterNavItemsByRole(permFiltered, roles);
 
   // Group items
   const groups = ["Main", "Sales", "Stock", "Admin"];
@@ -104,6 +106,42 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     await signOut();
     navigate("/");
   };
+
+  // POS-only users get a minimal layout without sidebar
+  if (posOnly) {
+    return (
+      <div className="flex flex-col h-screen overflow-hidden bg-background">
+        <header className="flex h-12 items-center justify-between border-b border-border px-4 bg-card shrink-0">
+          <div className="flex items-center gap-2">
+            {branding.logoUrl ? (
+              <img src={branding.logoUrl} alt={branding.businessName} className="h-7 w-7 rounded-lg object-cover" />
+            ) : (
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary">
+                <Store className="h-3.5 w-3.5 text-primary-foreground" />
+              </div>
+            )}
+            <span className="font-display text-sm font-bold">{branding.businessName}</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-semibold">
+              {initials}
+            </div>
+            <button
+              onClick={handleSignOut}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              <span>Sign Out</span>
+            </button>
+          </div>
+        </header>
+        <LicenseBanner />
+        <main className="flex-1 overflow-y-auto">
+          {children}
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">

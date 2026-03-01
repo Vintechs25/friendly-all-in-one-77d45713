@@ -3,6 +3,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLicense } from "@/contexts/LicenseContext";
 import { useFeatureToggles } from "@/hooks/useFeatureToggles";
 import LicenseGate from "@/components/LicenseGate";
+import { canAccessRoute } from "@/lib/role-access";
+import { ShieldAlert } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -10,8 +14,28 @@ interface ProtectedRouteProps {
   skipBusinessCheck?: boolean;
 }
 
+function AccessDenied() {
+  const navigate = useNavigate();
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="text-center max-w-md space-y-4">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-destructive/10">
+          <ShieldAlert className="h-8 w-8 text-destructive" />
+        </div>
+        <h2 className="text-xl font-bold">Access Denied</h2>
+        <p className="text-muted-foreground text-sm">
+          You do not have permission to access this page. Please contact your administrator if you believe this is an error.
+        </p>
+        <Button variant="outline" onClick={() => navigate(-1)}>
+          Go Back
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function ProtectedRoute({ children, requiredRole, skipBusinessCheck }: ProtectedRouteProps) {
-  const { session, profile, loading, hasRole } = useAuth();
+  const { session, profile, loading, hasRole, roles } = useAuth();
   const { isLoading: licenseLoading, needsLicense, canLogin } = useLicense();
   const { isRouteAllowedByFeature, isLoading: featureLoading } = useFeatureToggles();
   const location = useLocation();
@@ -58,7 +82,12 @@ export default function ProtectedRoute({ children, requiredRole, skipBusinessChe
   }
 
   if (requiredRole && !hasRole(requiredRole as any)) {
-    return <Navigate to="/dashboard" replace />;
+    return <AccessDenied />;
+  }
+
+  // Role-based route enforcement
+  if (!requiredRole && roles.length > 0 && !canAccessRoute(roles, location.pathname)) {
+    return <AccessDenied />;
   }
 
   // Super admins always bypass license gate

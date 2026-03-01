@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,14 +6,22 @@ import { Label } from "@/components/ui/label";
 import { Zap, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { getLoginRedirect } from "@/lib/role-access";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { signIn } = useAuth();
+  const { signIn, session, roles, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  // If already logged in, redirect based on role
+  useEffect(() => {
+    if (session && !authLoading && roles.length > 0) {
+      navigate(getLoginRedirect(roles), { replace: true });
+    }
+  }, [session, authLoading, roles, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,7 +37,7 @@ export default function LoginPage() {
         toast.error(error.message);
       } else {
         toast.success("Welcome back!");
-        navigate("/dashboard");
+        // Redirect happens via useEffect once roles load
       }
     } finally {
       setLoading(false);
