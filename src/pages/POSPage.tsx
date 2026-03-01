@@ -395,17 +395,22 @@ export default function POSPage() {
 
       // Insert payment entries
       const paymentInserts = splitMode
-        ? payments.filter((p) => p.amount > 0).map((p) => ({
-            sale_id: sale.id,
-            method: p.method,
-            amount: p.amount,
-            reference: p.reference || null,
-            payment_status: p.method === "mobile_money" && p.reference ? "pending" : "confirmed",
-            mpesa_checkout_request_id: p.method === "mobile_money" ? p.reference || null : null,
-          }))
+        ? payments.filter((p) => p.amount > 0).map((p) => {
+            const dbMethod = p.method === "mobile_money" ? "mpesa" : p.method;
+            return {
+              sale_id: sale.id,
+              business_id: profile!.business_id!,
+              method: dbMethod as any,
+              amount: p.amount,
+              reference: p.reference || null,
+              payment_status: p.method === "mobile_money" && p.reference ? "pending" : "confirmed",
+              mpesa_checkout_request_id: p.method === "mobile_money" ? p.reference || null : null,
+            };
+          })
         : [{
             sale_id: sale.id,
-            method: (payments[0]?.method ?? "cash") as PaymentMethod,
+            business_id: profile!.business_id!,
+            method: ((payments[0]?.method === "mobile_money" ? "mpesa" : payments[0]?.method) ?? "cash") as any,
             amount: total,
             reference: payments[0]?.reference || null,
             payment_status: payments[0]?.method === "mobile_money" && payments[0]?.reference ? "pending" : "confirmed",

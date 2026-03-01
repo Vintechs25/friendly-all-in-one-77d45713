@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import type { Tables, Database } from "@/integrations/supabase/types";
 
 type Business = Tables<"businesses">;
-type IndustryType = Database["public"]["Enums"]["industry_type"];
+type IndustryType = string;
 
 export default function AdminBusinessesPage() {
   const [businesses, setBusinesses] = useState<Business[]>([]);

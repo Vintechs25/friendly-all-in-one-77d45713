@@ -38,7 +38,6 @@ interface Device {
   id: string;
   device_fingerprint: string;
   device_name: string | null;
-  is_active: boolean;
   last_seen_at: string;
   registered_at: string;
 }
@@ -147,7 +146,7 @@ export default function AdminLicensesPage() {
   }
 
   async function deactivateDevice(deviceId: string) {
-    await supabase.from("device_registrations").update({ is_active: false }).eq("id", deviceId);
+    await supabase.from("device_registrations").delete().eq("id", deviceId);
     if (selectedLicense) loadDevices(selectedLicense.id);
     toast({ title: "Device deactivated" });
   }
@@ -330,14 +329,10 @@ export default function AdminLicensesPage() {
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant={d.is_active ? "default" : "secondary"}>
-                        {d.is_active ? "Active" : "Inactive"}
-                      </Badge>
-                      {d.is_active && (
-                        <Button variant="outline" size="sm" onClick={() => deactivateDevice(d.id)}>
-                          Deactivate
-                        </Button>
-                      )}
+                      <Badge variant="default">Active</Badge>
+                      <Button variant="outline" size="sm" onClick={() => deactivateDevice(d.id)}>
+                        Remove
+                      </Button>
                     </div>
                   </div>
                 ))

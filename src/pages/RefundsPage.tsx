@@ -144,9 +144,8 @@ export default function RefundsPage() {
       await supabase.from("refund_items").insert(refundItems);
 
       // Update sale status
-      const isFullRefund = refundAmount >= foundSale.total;
       await supabase.from("sales").update({
-        status: isFullRefund ? "refunded" : "partially_refunded",
+        status: "refunded" as const,
       }).eq("id", foundSale.id);
 
       // Restock if needed
