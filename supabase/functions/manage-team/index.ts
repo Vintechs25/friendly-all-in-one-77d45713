@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
       const { data: callerProfile } = await adminClient
         .from("profiles")
         .select("business_id")
-        .eq("id", callingUser.id)
+        .eq("user_id", callingUser.id)
         .single();
 
       if (callerProfile?.business_id !== business_id) {
