@@ -9,7 +9,7 @@ import {
 import { Search, Plus, AlertTriangle, Loader2, Package, Pencil, Trash2, Upload } from "lucide-react";
 import BulkImportDialog from "@/components/inventory/BulkImportDialog";
 import { autoFillProductFields } from "@/lib/product-auto-gen";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -58,14 +58,16 @@ export default function InventoryPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [form, setForm] = useState(emptyForm);
   const [branchId, setBranchId] = useState<string | null>(null);
+  const branchIdRef = useRef<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
 
   const businessId = profile?.business_id;
 
   const loadData = useCallback(async () => {
-    if (!businessId) { setLoading(false); return; }
+    if (!businessId || savingRef.current) { setLoading(false); return; }
     setLoading(true);
 
     // Load branch, products, inventory, categories in parallel
@@ -77,6 +79,7 @@ export default function InventoryPage() {
 
     const bid = branchRes.data?.[0]?.id ?? null;
     setBranchId(bid);
+    branchIdRef.current = bid;
     setCategories(catRes.data ?? []);
 
     if (!bid || !prodRes.data) {
@@ -149,6 +152,7 @@ export default function InventoryPage() {
       return;
     }
     setSaving(true);
+    savingRef.current = true;
     try {
       let productData: any;
 
@@ -198,30 +202,37 @@ export default function InventoryPage() {
         };
       }
 
-      if (editingProduct) {
-        const { error } = await supabase.from("products").update(productData).eq("id", editingProduct.id);
-        if (error) { toast.error(error.message); return; }
+      // Fetch branch directly to avoid stale state
+      const { data: branchData } = await supabase.from("branches").select("id").eq("business_id", businessId).eq("is_active", true).limit(1).single();
+      const activeBranchId = branchData?.id ?? null;
 
-        // Update inventory stock if changed
-        if (branchId && form.track_inventory) {
-          const newQty = parseInt(form.initial_stock) || 0;
+      if (editingProduct) {
+        const newQty = parseInt(form.initial_stock) || 0;
+
+        // Update inventory FIRST (before product update triggers realtime)
+        if (activeBranchId) {
           const { data: inv } = await supabase
-            .from("inventory").select("id").eq("product_id", editingProduct.id).eq("branch_id", branchId).maybeSingle();
+            .from("inventory").select("id").eq("product_id", editingProduct.id).eq("branch_id", activeBranchId).maybeSingle();
           if (inv) {
             await supabase.from("inventory").update({ quantity: newQty, reorder_level: productData.min_stock_level }).eq("id", inv.id);
           } else {
-            await supabase.from("inventory").insert({ product_id: editingProduct.id, branch_id: branchId, quantity: newQty, reorder_level: productData.min_stock_level });
+            await supabase.from("inventory").insert({ product_id: editingProduct.id, branch_id: activeBranchId, quantity: newQty, reorder_level: productData.min_stock_level });
           }
         }
+
+        // Now update product (triggers realtime reload)
+        const { error } = await supabase.from("products").update({ ...productData, stock_quantity: newQty }).eq("id", editingProduct.id);
+        if (error) { toast.error(error.message); return; }
+
         toast.success("Product updated");
       } else {
         const { data: newProduct, error } = await supabase.from("products").insert(productData).select().single();
         if (error) { toast.error(error.message); return; }
 
         // Create inventory record
-        if (branchId && form.track_inventory) {
+        if (activeBranchId && form.track_inventory) {
           await supabase.from("inventory").insert({
-            product_id: newProduct.id, branch_id: branchId,
+            product_id: newProduct.id, branch_id: activeBranchId,
             quantity: parseInt(form.initial_stock) || 0,
             reorder_level: productData.min_stock_level,
           });
@@ -229,11 +240,13 @@ export default function InventoryPage() {
         toast.success("Product added");
       }
       setDialogOpen(false);
+      savingRef.current = false;
       loadData();
     } catch (err: any) {
       toast.error(err.message);
     } finally {
       setSaving(false);
+      savingRef.current = false;
     }
   };
 
