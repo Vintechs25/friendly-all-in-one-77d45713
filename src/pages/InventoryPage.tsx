@@ -202,15 +202,20 @@ export default function InventoryPage() {
         const { error } = await supabase.from("products").update(productData).eq("id", editingProduct.id);
         if (error) { toast.error(error.message); return; }
 
+        // Also sync stock_quantity on the product itself
+        const newQty = parseInt(form.initial_stock) || 0;
+        await supabase.from("products").update({ stock_quantity: newQty }).eq("id", editingProduct.id);
+
         // Update inventory stock if changed
-        if (branchId && form.track_inventory) {
-          const newQty = parseInt(form.initial_stock) || 0;
+        if (branchId) {
           const { data: inv } = await supabase
             .from("inventory").select("id").eq("product_id", editingProduct.id).eq("branch_id", branchId).maybeSingle();
           if (inv) {
-            await supabase.from("inventory").update({ quantity: newQty, reorder_level: productData.min_stock_level }).eq("id", inv.id);
+            const { error: invErr } = await supabase.from("inventory").update({ quantity: newQty, reorder_level: productData.min_stock_level }).eq("id", inv.id);
+            if (invErr) console.error("Inventory update error:", invErr);
           } else {
-            await supabase.from("inventory").insert({ product_id: editingProduct.id, branch_id: branchId, quantity: newQty, reorder_level: productData.min_stock_level });
+            const { error: invErr } = await supabase.from("inventory").insert({ product_id: editingProduct.id, branch_id: branchId, quantity: newQty, reorder_level: productData.min_stock_level });
+            if (invErr) console.error("Inventory insert error:", invErr);
           }
         }
         toast.success("Product updated");
