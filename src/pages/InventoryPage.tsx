@@ -9,7 +9,7 @@ import {
 import { Search, Plus, AlertTriangle, Loader2, Package, Pencil, Trash2, Upload } from "lucide-react";
 import BulkImportDialog from "@/components/inventory/BulkImportDialog";
 import { autoFillProductFields } from "@/lib/product-auto-gen";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
