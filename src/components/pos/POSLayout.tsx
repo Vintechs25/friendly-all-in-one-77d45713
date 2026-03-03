@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useBranding } from "@/contexts/BrandingContext";
 import {
   Store, ArrowLeft, Clock, Wifi, WifiOff, CloudOff, RefreshCw, Loader2,
-  Scan, Volume2, VolumeX,
+  Scan, Volume2, VolumeX, LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ScanMode } from "@/hooks/use-scanner";
@@ -43,7 +43,7 @@ export default function POSLayout({
 }: POSLayoutProps) {
   const [time, setTime] = useState(new Date());
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, signOut } = useAuth();
   const { branding } = useBranding();
 
   useEffect(() => {
@@ -166,6 +166,15 @@ export default function POSLayout({
             <Clock className="h-3 w-3" />
             {time.toLocaleTimeString("en-KE", { hour: "2-digit", minute: "2-digit", hour12: true })}
           </div>
+
+          {/* Logout */}
+          <button
+            onClick={signOut}
+            className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-destructive/20 text-sidebar-foreground/60 hover:text-destructive transition-colors"
+            title="Logout"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+          </button>
         </div>
       </header>
 
