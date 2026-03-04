@@ -197,7 +197,7 @@ export default function POSLayout({
 
           {/* Logout */}
           <button
-            onClick={signOut}
+            onClick={handleLogout}
             className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-destructive/20 text-sidebar-foreground/60 hover:text-destructive transition-colors"
             title="Logout"
           >
@@ -210,6 +210,12 @@ export default function POSLayout({
       <main className="flex-1 overflow-hidden">
         {children}
       </main>
+
+      <CloseShiftDialog
+        open={showCloseShift}
+        onOpenChange={setShowCloseShift}
+        onShiftClosed={() => signOut()}
+      />
     </div>
   );
 }
