@@ -335,6 +335,52 @@ export default function SettingsPage() {
           </Card>
         )}
 
+        {/* Shift Management Settings - visible to business owners */}
+        {isBusinessOwner && profile?.business_id && shiftSettings && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" /> Shift Management
+              </CardTitle>
+              <CardDescription>
+                Control whether cashiers must open/close shifts and count cash at the drawer.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-medium">Require Shifts</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Cashiers must open a shift before accessing the POS and close it on logout.
+                  </p>
+                </div>
+                <Switch
+                  checked={shiftSettings.requireShift}
+                  onCheckedChange={(checked) => toggleShiftSetting("require_shift", checked)}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-medium">Cash Counting at Drawer</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Require cashiers to count and enter cash amounts when opening and closing shifts.
+                  </p>
+                </div>
+                <Switch
+                  checked={shiftSettings.requireCashCounting}
+                  onCheckedChange={(checked) => toggleShiftSetting("require_cash_counting", checked)}
+                  disabled={!shiftSettings.requireShift}
+                />
+              </div>
+              {!shiftSettings.requireShift && (
+                <p className="text-xs text-muted-foreground italic">
+                  Enable "Require Shifts" to configure cash counting.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Payment Configuration - visible to business owners */}
         {isBusinessOwner && profile?.business_id && (
           <PaymentConfigCard businessId={profile.business_id} />
