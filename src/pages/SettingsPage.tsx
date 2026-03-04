@@ -29,6 +29,7 @@ export default function SettingsPage() {
   const [savingPin, setSavingPin] = useState(false);
   const [hasExistingPin, setHasExistingPin] = useState(false);
 
+  const isBusinessOwner = hasRole("business_owner" as any);
   const isManager = hasRole("manager" as any) || hasRole("branch_manager" as any);
   const canSetPin = isBusinessOwner || isManager;
 
