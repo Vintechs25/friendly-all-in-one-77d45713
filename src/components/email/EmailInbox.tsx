@@ -92,7 +92,7 @@ export default function EmailInbox() {
               size="sm"
               onClick={() => toggleStarMutation.mutate({ id: selectedEmail.id, starred: selectedEmail.is_starred })}
             >
-              <Star className={cn("h-4 w-4", selectedEmail.is_starred && "fill-yellow-400 text-yellow-400")} />
+              <Star className={cn("h-4 w-4", selectedEmail.is_starred && "fill-current text-yellow-500")} />
             </Button>
             <Button variant="ghost" size="sm" onClick={() => archiveMutation.mutate(selectedEmail.id)}>
               <Archive className="h-4 w-4" />
